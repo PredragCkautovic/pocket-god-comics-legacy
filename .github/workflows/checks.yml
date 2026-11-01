@@ -13,15 +13,19 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Verify public Python utilities compile
-        run: python3 -m py_compile tools/*.py
+      - name: Install test dependencies
+        run: python3 -m pip install -r requirements-dev.txt
+      - name: Verify Python syntax
+        run: python3 -m py_compile tools/*.py tests/*.py
+      - name: Run synthetic archive and cover tests
+        run: python3 -m unittest discover -s tests -v
       - name: Utilities expose working help
         run: |
           python3 tools/inspect_ipa.py --help
           python3 tools/verify_cover_set.py --help
-      - name: Block publication of proprietary build artifacts
+      - name: Block proprietary binary artifacts
         run: |
           if find . -type f \( -iname '*.ipa' -o -iname '*.apk' -o -iname '*.cbz' -o -iname '*.dylib' -o -iname '*.p12' \) | grep .; then
-            echo 'Error: prohibited binary/archive present'
+            echo 'Error: proprietary binary/archive present'
             exit 1
           fi

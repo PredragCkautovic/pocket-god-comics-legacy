@@ -7,6 +7,7 @@
 ![iOS](https://img.shields.io/badge/target-iOS%207%E2%80%939-2375C9?style=flat-square)
 ![Architecture](https://img.shields.io/badge/CPU-armv7%20%7C%20armv7s-535E70?style=flat-square)
 ![Editions](https://img.shields.io/badge/editions-25%20%7C%2063-32866B?style=flat-square)
+![Public Source Checks](https://github.com/PredragCkautovic/pocket-god-comics-legacy/actions/workflows/checks.yml/badge.svg)
 
 **The mission:** preserve the look, navigation and page-turning experience of the original iVerse-based Pocket God Comics app on older Apple hardware. This project explores offline comic access while keeping the **real iPhone and iPad reader interfaces**, rather than replacing them with a generic web viewer.
 
