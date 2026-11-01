@@ -124,11 +124,11 @@ Use the [device bug report](.github/ISSUE_TEMPLATE/bug_report.yml) with **hardwa
 
 ### Active development and QA
 
-- [iPad 2 / iOS 9 launch and library QA](issues/1)
-- [iPhone 4 / 4S legacy compatibility QA](issues/2)
-- [Authentic Classic 25 print-issue mapping](issues/3)
+- [iPad 2 / iOS 9 launch and library QA](https://github.com/PredragCkautovic/pocket-god-comics-legacy/issues/1)
+- [iPhone 4 / 4S legacy compatibility QA](https://github.com/PredragCkautovic/pocket-god-comics-legacy/issues/2)
+- [Authentic Classic 25 print-issue mapping](https://github.com/PredragCkautovic/pocket-god-comics-legacy/issues/3)
 
-Issues are organized into [v13 universal hardware QA](milestone/1) and [Classic 25 reconstruction](milestone/2) milestones. These items describe **work to validate**, not proven device compatibility.
+Issues are organized into [v13 universal hardware QA](https://github.com/PredragCkautovic/pocket-god-comics-legacy/milestone/1) and [Classic 25 reconstruction](https://github.com/PredragCkautovic/pocket-god-comics-legacy/milestone/2) milestones. These items describe **work to validate**, not proven device compatibility.
 
 
 ---
