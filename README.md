@@ -122,6 +122,15 @@ Use the [device bug report](.github/ISSUE_TEMPLATE/bug_report.yml) with **hardwa
 
 [Testing checklist](docs/TESTING.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
 
+### Active development and QA
+
+- [iPad 2 / iOS 9 launch and library QA](issues/1)
+- [iPhone 4 / 4S legacy compatibility QA](issues/2)
+- [Authentic Classic 25 print-issue mapping](issues/3)
+
+Issues are organized into [v13 universal hardware QA](milestone/1) and [Classic 25 reconstruction](milestone/2) milestones. These items describe **work to validate**, not proven device compatibility.
+
+
 ---
 
 ### Rights, attribution and licensing
