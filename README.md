@@ -77,7 +77,7 @@ The original reader stays in place. An Objective-C bridge supplies offline entri
 - [ ] Publish reproducible, hardware-tested release procedures
 - [ ] Explore modern iOS and Android editions as separate work
 
-**Latest physical testing:** v13 Classic 25 works on iPad. On iPhone, v13.1 removed crashes but left an empty shelf. v13.2 crashed on iPhone 4 during a repeated shelf-loader call. v13.3 removed that call; both iPhone models became stable but the shelf remained empty. Their diagnostic logs now show a concrete Core Data fetch error (134060). **v14** repairs the alphabetical-sort mismatch between the original reader's section key and our seeded sortName values, migrating previously installed entries without removing reading progress. **Physical v14 validation is pending.** See [iPhone QA issue #2](https://github.com/PredragCkautovic/pocket-god-comics-legacy/issues/2).
+**Latest physical testing:** **v14 Classic 25 loads comics on both iPhone 4 and iPhone 4S**, and the iPad edition also works. The remaining iPhone issue is **alphabetical rather than chronological story order**. **v15** stores numeric episode sort keys and returns one numeric section for offline titles *on iPhone only*, preserving original comic titles, the stable Core Data fetch, and the working iPad path. Existing v14 device records are updated in place. **Real-device v15 verification is pending.** See [iPhone QA issue #2](https://github.com/PredragCkautovic/pocket-god-comics-legacy/issues/2).
 
 **Compile success and ZIP validation are not substitutes for hardware compatibility testing.** These editions are QA builds, not certified stable releases.
 

@@ -1,5 +1,5 @@
-// v14: correct Product.sortName to match original alphabetical sections.
-// Project-authored bridge source only; commercial application and comics are not included.
+// v15 universal iOS 7-9 bridge. Chronological phone catalog order.
+// Unofficial original compatibility source, not the original commercial binary.
 // Pocket God Comics owner archive restoration loader.
 // Runs INSIDE the original iVerse binary; does not replace nibs, animations or UI.
 // iOS 7 ARMv7, private on-device test; all external comics are packaged locally.
@@ -15,6 +15,7 @@ static BOOL pgSeedComplete=NO;
 static const void *PGEntryKey = &PGEntryKey;
 static IMP pgOrigIpadLaunch=NULL,pgOrigPhoneLaunch=NULL;
 static IMP pgOrigIpadLoad=NULL,pgOrigPhoneAppear=NULL;
+static IMP pgOrigProductAlphabeticalIndex=NULL;
 static BOOL pgSeedAttemptRunning=NO, pgRetryScheduled=NO;
 static __weak id pgVisibleIpadShelf=nil;
 static NSArray *pgCoverMigrationProducts=nil;
@@ -137,13 +138,43 @@ static BOOL pgAttachImage(NSManagedObjectContext *context, NSManagedObject *prod
     }
 }
 // The original phone reader's Database.productsByName fetch sorts first by
-// Product.sortName, but groups by Product.alphabeticalIndex, which is computed
-// by taking the FIRST character of Product.name. If sortName uses an episode
-// identifier (pg.offline.001) while name is a natural chapter title, fetched
-// sections become out-of-order and FRC -performFetch: fails (Core Data 134060).
+// Product.sortName, but groups by Product.alphabeticalIndex, which normally
+// uses the first character of Product.name. Earlier builds couldn't display
+// numerical order because that caused FRC section mismatch 134060.
+// v15 instead makes both sort keys and sections numerical for phone offline
+// items, while keeping their real displayed titles and non-offline behavior.
 //
-// v14 repairs BOTH old persisted records and newly seeded records in-place.
+// v15 repairs BOTH old persisted records and newly seeded records in-place.
 // Do not delete or recreate an installed comic or alter its reading progress.
+// Group numbered offline comics together on iPhone without changing the
+// displayed name. The original phone FRC sorts by sortName and divides rows
+// into alphabeticalIndex sections, so BOTH values must agree.
+// Keep the entire offline collection in section "0" with padded sort keys:
+//   0001, 0002, 0003 ... 0063 (chronological reading order).
+// Non-offline products and the iPad retain their original indexes.
+static BOOL pgIsPhoneUI(void) {
+    return UI_USER_INTERFACE_IDIOM()==UIUserInterfaceIdiomPhone;
+}
+static NSString *pgOrderedSortName(NSDictionary *entry,NSString *fallbackName) {
+    if(!pgIsPhoneUI())return fallbackName;
+    NSInteger number=[[entry objectForKey:@"episode"] integerValue];
+    if(number<1 || number>999)return fallbackName;
+    return [NSString stringWithFormat:@"0%03ld",(long)number];
+}
+static id pgProductAlphabeticalIndex(id self,SEL cmd) {
+    if(pgIsPhoneUI()) {
+        @try {
+            NSString *pid=pgMsg0(self,@selector(productID));
+            if([pid isKindOfClass:[NSString class]] &&
+               [pid hasPrefix:@"pg.offline."])
+                return @"0"; // SAME section for every numbered offline comic.
+        } @catch(NSException *e) {
+            pgDiagnostic(@"ORDER section fallback %@ %@",e.name,e.reason);
+        }
+    }
+    return pgOrigProductAlphabeticalIndex?
+       ((id(*)(id,SEL))pgOrigProductAlphabeticalIndex)(self,cmd):nil;
+}
 static BOOL pgRepairOfflineSortNames(NSManagedObjectContext *context) {
     if(!context || ![pgEntriesByID count])return NO;
     NSFetchRequest *request=[NSFetchRequest fetchRequestWithEntityName:@"Product"];
@@ -174,11 +205,10 @@ static BOOL pgRepairOfflineSortNames(NSManagedObjectContext *context) {
                 name=expectedTitle;
             }
             NSString *oldSort=[product valueForKey:@"sortName"];
-            // Alphabetical section key is derived from 'name', so match that
-            // exact displayed title for native sort order and section order.
+            NSString *desired=pgOrderedSortName(entry,name);
             if(![oldSort isKindOfClass:[NSString class]] ||
-               ![oldSort isEqualToString:name]) {
-                [product setValue:name forKey:@"sortName"];
+               ![oldSort isEqualToString:desired]) {
+                [product setValue:desired forKey:@"sortName"];
                 repaired++;
             }
         }
@@ -197,9 +227,10 @@ static BOOL pgRepairOfflineSortNames(NSManagedObjectContext *context) {
         pgDiagnostic(@"SORT FIX exception %@ %@",exception.name,exception.reason);
         return NO;
     }
-    pgDiagnostic(@"SORT FIX complete: repaired=%lu missingTitle=%lu indexed=%lu; first sort key matches section title",
+    pgDiagnostic(@"ORDER FIX completed: repaired=%lu missingTitle=%lu indexed=%lu mode=%@",
                  (unsigned long)repaired,(unsigned long)missing,
-                 (unsigned long)[products count]);
+                 (unsigned long)[products count],
+                 pgIsPhoneUI()?@"chronological phone":@"unchanged iPad");
     return missing==0;
 }
 static void pgSeedProducts(void) {
@@ -290,7 +321,7 @@ static void pgSeedProducts(void) {
                 [product setValue:offlineSupplier forKey:@"supplier"];
                 NSString *title=[entry objectForKey:@"title"] ?: identifier;
                 [product setValue:title forKey:@"name"];
-                [product setValue:title forKey:@"sortName"];
+                [product setValue:pgOrderedSortName(entry,title) forKey:@"sortName"];
                 [product setValue:[NSNumber numberWithInt:[[entry objectForKey:@"episode"] intValue]] forKey:@"number"];
                 [product setValue:@"comic" forKey:@"productType"];
                 [product setValue:[NSNumber numberWithBool:YES] forKey:@"completed"];
@@ -786,7 +817,7 @@ static void pgHook(Class cls,SEL sel,IMP imp,IMP *old) {
 }
 __attribute__((constructor)) static void pgInstallHooks(void) {
     @autoreleasepool {
-        pgDiagnostic(@"Offline content bridge dynamic library loaded; loaderVersion=14.0-ALPHABETICAL-SORT-REPAIR");
+        pgDiagnostic(@"Offline content bridge dynamic library loaded; loaderVersion=15.0-NUMERIC-ORDERED-SHELF");
         pgLoadManifest();
         Class bundle=NSClassFromString(@"ComicBundle"),database=NSClassFromString(@"Database");
         pgHook(bundle,@selector(initWithProduct:),(IMP)pgBundleInit,&pgOrigBundleInit);
@@ -801,6 +832,11 @@ __attribute__((constructor)) static void pgInstallHooks(void) {
         pgHook(bundle,@selector(checksumIsValid),(IMP)pgBundleChecksum,&pgOrigBundleChecksum);
         pgHook(bundle,@selector(verticalIndexForHorizontalPanelIndex:),(IMP)pgVertIndex,&pgOrigBundleVertIndex);
         pgHook(bundle,@selector(horizontalIndexForVerticalPanelIndex:),(IMP)pgHorizIndex,&pgOrigBundleHorizIndex);
+        // Product.alphabeticalIndex is the FRC sectionNameKeyPath used by
+        // original iPhone My Comics. Phone offline comics use numeric section
+        // "0", while all other products and iPad retain original behavior.
+        pgHook(NSClassFromString(@"Product"),@selector(alphabeticalIndex),
+               (IMP)pgProductAlphabeticalIndex,&pgOrigProductAlphabeticalIndex);
         pgHook(database,@selector(productIsInstalled:),(IMP)pgProductInstalled,&pgOrigProductInstalled);
         pgHook(database,@selector(removeProductFromCollection:),(IMP)pgPreventOfflineDeletion,&pgOrigRemoveProduct);
         pgHook(NSClassFromString(@"iVerse_ReaderiPadAppDelegate"),@selector(application:didFinishLaunchingWithOptions:),(IMP)pgIpadLaunch,&pgOrigIpadLaunch);
