@@ -19,18 +19,18 @@
 
 | Feature | Classic 25 | Complete 63 |
 |---|---|---|
-| Library | 25 WEBTOON entries | 63 WEBTOON entries |
-| Cleaned reading pages | 269 | 702 |
-| Covers | 25 original printed cover images, **provisionally matched** to entries | Those 25 covers plus 38 individually created covers |
+| Library | 25 original print issue stories | 63 creator WEBTOON chapters |
+| Byte-preserved comic/extra pages | 629 | 702 |
+| Covers | Original print issue covers #1–25, correctly matched to regrouped stories | Original WEBTOON chapter thumbnails #1–25 + custom covers for chapters #26–63 |
 | User interface | Original iVerse iPhone/iPad reader | Original iVerse iPhone/iPad reader |
 | Reading | Offline, for content already packaged locally | Offline, for content already packaged locally |
 | Status | Built; awaiting hardware QA | Built; awaiting hardware QA |
 
-> **Numbering clarification:** Classic 25 currently means the **first 25 WEBTOON episodes** with authentic printed-issue covers mapped to the shelf slots. It is **not yet** a reconstruction of all 25 original *printed issues*. The distinction is tracked in the roadmap rather than hidden.
+> **Correct indexing as of v16:** Classic 25 now reconstructs 25 original printed issue **stories** from 53 creator-reposted WEBTOON segments. It does not claim lost print-only bonus, editorial or advertisement pages. Complete 63 preserves all 63 WEBTOON posts in chronological order, including mini-stories, recap and updates. See the [25-issue map](docs/CANONICAL_PRINT_25_INDEX.md) and [63-chapter index](docs/WEBTOON_63_CHAPTER_INDEX.md).
 
 ## 📱 Hardware and OS targets
 
-The v13 universal QA packages include **armv7 and armv7s** code in both the original executable and compatibility bridge, and declare support for **iPhone and iPad** with **iOS 7.0 minimum**.
+The v16 universal QA packages include **armv7 and armv7s** code in both the original executable and compatibility bridge, and declare support for **iPhone and iPad** with **iOS 7.0 minimum**.
 
 | Device | Target iOS versions | Test status |
 |---|---|---|
@@ -58,7 +58,7 @@ flowchart TD
 
 The original reader stays in place. An Objective-C bridge supplies offline entries through the existing **Core Data** catalog and **ComicBundle** page interfaces. There are **separate phone and tablet shelf controllers**, both handled in the combined build. Small JPEG shelf thumbnails reduce memory pressure on older devices.
 
-**Startup safety:** Earlier v11 builds automatically presented *My Comics* on launch and were reported to crash on an iPad. v12 rolled that behavior back. The v13 universal test builds **preserve the original startup screen**; testers open My Comics manually.
+**Startup safety:** Earlier v11 builds automatically presented *My Comics* on launch and were reported to crash on an iPad. v12 rolled that behavior back. The v16 universal test builds **preserve the original startup screen**; testers open My Comics manually.
 
 [Architecture](docs/ARCHITECTURE.md) · [Building](docs/BUILDING.md) · [Troubleshooting](docs/TROUBLESHOOTING.md)
 
@@ -66,18 +66,19 @@ The original reader stays in place. An Objective-C bridge supplies offline entri
 
 - [x] Inspect original phone/tablet application paths
 - [x] Prepare 25 and 63 offline libraries
-- [x] Preserve 269 and 702 cleaned reading pages in local test packages
+- [x] Preserve 629 original print-issue story pages and 702 WEBTOON chapter/extra pages in separate source-correct libraries
 - [x] Integrate original print covers and 38 separately generated covers into private packages
 - [x] Bridge both iPhone and iPad My Comics shelves to the original reader
 - [x] Build **two** packages including armv7 and armv7s
 - [x] Remove automatic shelf startup after reported crashes
 - [x] Verify IPA structure, content bytes, cover mapping and bundle metadata
 - [ ] Verify reliable operation on physical iPhone 4 / 4S and iPad hardware
-- [ ] Reconstruct the actual 25 original printed volumes, not merely the first 25 episodes
+- [x] Reconstruct 25 original issue **stories** from verified WEBTOON chapter segments and match all 25 original issue covers
+- [ ] Recover additional print-only bonus/editorial material if rights-authorized source becomes available
 - [ ] Publish reproducible, hardware-tested release procedures
 - [ ] Explore modern iOS and Android editions as separate work
 
-**Latest physical testing:** **v14 Classic 25 loads comics on both iPhone 4 and iPhone 4S**, and the iPad edition also works. The remaining iPhone issue is **alphabetical rather than chronological story order**. **v15** stores numeric episode sort keys and returns one numeric section for offline titles *on iPhone only*, preserving original comic titles, the stable Core Data fetch, and the working iPad path. Existing v14 device records are updated in place. **Real-device v15 verification is pending.** See [iPhone QA issue #2](https://github.com/PredragCkautovic/pocket-god-comics-legacy/issues/2).
+**Latest physical testing:** The owner confirmed that v14 loads comics on both iPhone 4 and 4S and on iPad. However, the library titles and story groupings were mismatched because the first 25 WEBTOON posts had been mistaken for the 25 original print issues. **v16 corrects the content indexing and artwork associations**, maintains chronological in-app numeric ordering from v15, and migrates installed book titles and cover caches. **v16 needs new hardware QA before being called stable.** See [device QA issue #2](https://github.com/PredragCkautovic/pocket-god-comics-legacy/issues/2) and [print issue mapping issue #3](https://github.com/PredragCkautovic/pocket-god-comics-legacy/issues/3).
 
 **Compile success and ZIP validation are not substitutes for hardware compatibility testing.** These editions are QA builds, not certified stable releases.
 
@@ -88,6 +89,8 @@ src/PGOfflineLoader.m      Original Objective-C compatibility bridge
 tools/inspect_ipa.py       Read-only local IPA/manifest inspection
 tools/verify_cover_set.py  Validates individually numbered cover images
 docs/ARCHITECTURE.md       Original-reader integration and design
+docs/CANONICAL_PRINT_25_INDEX.md  Verified original 25 issue/story map
+docs/WEBTOON_63_CHAPTER_INDEX.md  Chronological 63 creator chapter index
 docs/COMPATIBILITY.md      iOS and device targeting
 docs/INSTALLATION.md       Preflight, backups, manual library navigation
 docs/BUILDING.md           Build prerequisites and source boundaries

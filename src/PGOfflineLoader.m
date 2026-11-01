@@ -1,5 +1,5 @@
-// v15 universal iOS 7-9 bridge. Chronological phone catalog order.
-// Unofficial original compatibility source, not the original commercial binary.
+// v16: canonical 25 printed story issue and creator WEBTOON chapter indexing.
+// Unofficial source-authored compatibility bridge; no original iVerse binary or commercial art.
 // Pocket God Comics owner archive restoration loader.
 // Runs INSIDE the original iVerse binary; does not replace nibs, animations or UI.
 // iOS 7 ARMv7, private on-device test; all external comics are packaged locally.
@@ -200,7 +200,11 @@ static BOOL pgRepairOfflineSortNames(NSManagedObjectContext *context) {
                 continue;
             }
             NSString *name=[product valueForKey:@"name"];
-            if(![name isKindOfClass:[NSString class]] || ![name length]) {
+            // New canonical print issue grouping changes the title behind
+            // an existing productID. Preserve the installed product itself
+            // (and reading progress), but fix its displayed name in place.
+            if(![name isKindOfClass:[NSString class]] ||
+               ![name isEqualToString:expectedTitle]) {
                 [product setValue:expectedTitle forKey:@"name"];
                 name=expectedTitle;
             }
@@ -420,11 +424,11 @@ static void pgMigrateCoverBatch(void) {
             NSString *pid=[product valueForKey:@"productID"];
             NSDictionary *entry=[pgEntriesByID objectForKey:pid];
             if(!entry)continue;
-            // v8 persisted a migrated flag that is not reliable after app upgrades.
+            // v16 remaps chapter artwork to the matching story and must refresh all shelf covers.
             // Rebuild ALL 63 tiny cover images on first v10 launch, and only
             // repair missing image entities/attributes on later launches.
             BOOL forceRepair= ![[NSUserDefaults standardUserDefaults]
-                                 boolForKey:@"PGOfflineCoverCacheV10Migrated"];
+                                 boolForKey:@"PGOfflineCoverCacheV16CanonicalMapped"];
             if(!forceRepair) {
                 id currentCover=[product valueForKey:@"coverImage"];
                 id currentThumb=[product valueForKey:@"thumbnailImage"];
@@ -492,9 +496,9 @@ static void pgMigrateCoverBatch(void) {
         pgCoverMigrationProducts=nil;
         pgCoverMigrationRunning=NO;
         NSUserDefaults *prefs=[NSUserDefaults standardUserDefaults];
-        [prefs setBool:YES forKey:@"PGOfflineCoverCacheV10Migrated"];
+        [prefs setBool:YES forKey:@"PGOfflineCoverCacheV16CanonicalMapped"];
         [prefs synchronize];
-        pgDiagnostic(@"V10 COVER REPAIR COMPLETE: %lu comic shelf records repaired and checked",
+        pgDiagnostic(@"V16 COVER REPAIR COMPLETE: %lu comic shelf records repaired and checked",
                      (unsigned long)count);
     }
 }
@@ -817,7 +821,7 @@ static void pgHook(Class cls,SEL sel,IMP imp,IMP *old) {
 }
 __attribute__((constructor)) static void pgInstallHooks(void) {
     @autoreleasepool {
-        pgDiagnostic(@"Offline content bridge dynamic library loaded; loaderVersion=15.0-NUMERIC-ORDERED-SHELF");
+        pgDiagnostic(@"Offline content bridge dynamic library loaded; loaderVersion=16.0-CANONICAL-PRINT-WEBTOON-ORDER");
         pgLoadManifest();
         Class bundle=NSClassFromString(@"ComicBundle"),database=NSClassFromString(@"Database");
         pgHook(bundle,@selector(initWithProduct:),(IMP)pgBundleInit,&pgOrigBundleInit);

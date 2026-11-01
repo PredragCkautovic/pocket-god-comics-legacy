@@ -17,10 +17,10 @@
 - [ ] Expand tests to iPhone 5/5c, iPad 3/4/mini where available
 
 ## 3 — Proper Classic 25 reconstruction
-- [ ] Research and confirm each original printed volume's page order
-- [ ] Distinguish print-issue numbers from WEBTOON episode numbers
-- [ ] Rebuild authentic 25-print-issue library using lawful owner-provided material
-- [ ] Record any missing pages and provenance constraints
+- [x] Research and regroup 25 original printed issue stories from creator WEBTOON chapters (629 source pages)
+- [x] Distinguish print-issue numbers from WEBTOON episode numbers and document both canonical indices
+- [x] Rebuild separate print 25 and WEBTOON 63 story archives, preserving original images and covers
+- [ ] Recover print-only layout/extra pages not present in original creator WEBTOON release
 
 ## 4 — Reproducible, stable release procedures
 - [ ] Portable build packaging with no hardcoded personal paths
