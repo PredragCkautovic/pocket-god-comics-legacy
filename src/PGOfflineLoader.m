@@ -1,5 +1,5 @@
-// v13.2 phone-only deferred original shelf refresh (experimental, on-device QA pending).
-// No copyrighted commercial application or story assets included.
+// v13.3: owner iPhone 4 logs suggest repeat loadShelfView crash; safe existing FRC fetch
+// Source only; commercial iVerse binary and story content not included.
 // Pocket God Comics owner archive restoration loader.
 // Runs INSIDE the original iVerse binary; does not replace nibs, animations or UI.
 // iOS 7 ARMv7, private on-device test; all external comics are packaged locally.
@@ -435,6 +435,11 @@ static BOOL pgIpadLaunch(id self,SEL cmd,id app,id options) {
 // RESTORED: original iVerse iPhone decides which tab to show on launch.
 static BOOL pgPhoneLaunch(id self,SEL cmd,id app,id options) {
     pgDiagnostic(@"iPhone original launch path, no automatic tab switching");
+    // Purge stale named FRC cache before any phone shelf can create/use it.
+    // v13.2 deleted the cache after the FRC was already alive, then called
+    // loadShelfView a second time; that is unsafe on owner iPhone 4.
+    [NSFetchedResultsController deleteCacheWithName:@"alphabeticalIndex"];
+    pgDiagnostic(@"PHONE SHELF named FRC cache cleared before original launch");
     BOOL ok=((BOOL (*)(id,SEL,id,id))pgOrigPhoneLaunch)(self,cmd,app,options);
     pgSeedProducts();
     pgScheduleSeedRetry();
@@ -502,12 +507,12 @@ static void pgIpadLoad(id self,SEL cmd) {
 //
 // Phone shelf is different from the iPad: MyComicsViewController.loadShelfView
 // builds a CoreData NSFetchedResultsController using cache "alphabeticalIndex".
-// At launch the controller can precede offline catalog seeding; without a later
-// fetch, a saved catalog can still leave an empty visible iPhone shelf.
+// At launch the controller can precede offline catalog seeding; without a
+// second performFetch on the existing controller the shelf stays empty.
 //
 // WARNING: v13's two eager phone hooks crashed in owner device tests.
 // Do NOT seed or synchronously reload inside loadShelfView / viewDidAppear.
-// The ORIGINAL methods remain intact. Only one bounded delayed refresh runs
+// Original loadShelfView remains untouched. Only one guarded FRC refetch runs
 // when the original phone view is on screen and CoreData seeding is complete.
 static BOOL pgPhoneShelfRefreshDone=NO;
 static BOOL pgPhoneShelfRefreshPending=NO;
@@ -541,22 +546,44 @@ static void pgPhoneRefreshOnceLater(id shelf, NSTimeInterval delay) {
             return;
         }
         @try {
-            // Original Database.productsByName creates a fetched-results
-            // controller named "alphabeticalIndex". Its cache may predate
-            // the local catalog created during launch.
-            [NSFetchedResultsController deleteCacheWithName:@"alphabeticalIndex"];
-            SEL load=@selector(loadShelfView);
-            if([strongShelf respondsToSelector:load]) {
-                pgDiagnostic(@"PHONE SHELF one deferred original reload; catalog=%lu",
-                             (unsigned long)[pgEntriesByID count]);
-                pgMsg0(strongShelf,load); // original implementation, no swizzle
+            // Do NOT invoke -loadShelfView again: owner iPhone 4 v13.2
+            // diagnostics end at that call and the application relaunches.
+            // Use the EXISTING fetched-results controller that the original
+            // phone shelf created on first appearance.
+            id current=nil;
+            SEL getList=@selector(productList);
+            if([strongShelf respondsToSelector:getList])
+                current=pgMsg0(strongShelf,getList);
+            pgDiagnostic(@"PHONE SHELF refresh existing controller type=%@",
+                         NSStringFromClass([current class]));
+            if(![current isKindOfClass:[NSFetchedResultsController class]]) {
+                pgDiagnostic(@"PHONE SHELF no original FRC; leave UI intact");
+                return;
+            }
+            NSFetchedResultsController *frc=(NSFetchedResultsController *)current;
+            NSUInteger before=[[frc fetchedObjects] count];
+            NSError *fetchError=nil;
+            BOOL loaded=[frc performFetch:&fetchError];
+            if(!loaded || fetchError) {
+                pgDiagnostic(@"PHONE SHELF FRC fetch failed: %@",
+                             fetchError?[fetchError localizedDescription]:@"no details");
+                return;
+            }
+            NSUInteger after=[[frc fetchedObjects] count];
+            pgDiagnostic(@"PHONE SHELF FRC fetched %lu -> %lu objects",
+                         (unsigned long)before,(unsigned long)after);
+            id table=[strongShelf respondsToSelector:@selector(myComicsTableView)]?
+                      pgMsg0(strongShelf,@selector(myComicsTableView)):nil;
+            if([table respondsToSelector:@selector(reloadData)]) {
+                [table reloadData];
                 pgPhoneShelfRefreshDone=YES;
-                pgDiagnostic(@"PHONE SHELF deferred original reload completed");
+                pgDiagnostic(@"PHONE SHELF safe table refresh completed; records=%lu",
+                             (unsigned long)after);
             } else {
-                pgDiagnostic(@"PHONE SHELF cannot refresh: missing original loadShelfView");
+                pgDiagnostic(@"PHONE SHELF no original table view to refresh");
             }
         } @catch(NSException *e) {
-            pgDiagnostic(@"PHONE SHELF deferred original refresh threw: %@ %@",e.name,e.reason);
+            pgDiagnostic(@"PHONE SHELF safe refresh threw: %@ %@",e.name,e.reason);
         }
     });
 }
@@ -688,7 +715,7 @@ static void pgHook(Class cls,SEL sel,IMP imp,IMP *old) {
 }
 __attribute__((constructor)) static void pgInstallHooks(void) {
     @autoreleasepool {
-        pgDiagnostic(@"Offline content bridge dynamic library loaded; loaderVersion=13.2-PHONE-SAFE-DEFERRED-REFRESH");
+        pgDiagnostic(@"Offline content bridge dynamic library loaded; loaderVersion=13.3-PHONE-FRC-REFETCH");
         pgLoadManifest();
         Class bundle=NSClassFromString(@"ComicBundle"),database=NSClassFromString(@"Database");
         pgHook(bundle,@selector(initWithProduct:),(IMP)pgBundleInit,&pgOrigBundleInit);
