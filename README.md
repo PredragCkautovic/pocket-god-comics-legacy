@@ -77,7 +77,7 @@ The original reader stays in place. An Objective-C bridge supplies offline entri
 - [ ] Publish reproducible, hardware-tested release procedures
 - [ ] Explore modern iOS and Android editions as separate work
 
-**Latest physical testing:** The owner confirmed **v13 Classic 25 works on iPad**, but **crashes when My Comics is opened on an iPhone**. A **v13.1 iPhone lifecycle isolation patch** removes redundant phone shelf callbacks; its impact still requires iPhone retesting. See [iPhone QA issue #2](https://github.com/PredragCkautovic/pocket-god-comics-legacy/issues/2).
+**Latest physical testing:** The owner confirmed **v13 Classic 25 works on iPad**, but **crashes when My Comics is opened on an iPhone**. A **v13.1 iPhone lifecycle rollback** prevented the crash but left My Comics empty on iPhone. **v13.2** adds one delayed, guarded refresh after offline catalog seeding and resets the original fetched-results-controller cache. Its behavior still requires physical iPhone testing. See [iPhone QA issue #2](https://github.com/PredragCkautovic/pocket-god-comics-legacy/issues/2).
 
 **Compile success and ZIP validation are not substitutes for hardware compatibility testing.** These editions are QA builds, not certified stable releases.
 

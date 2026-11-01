@@ -1,5 +1,5 @@
-// v13.1 iPhone My Comics lifecycle isolation; not yet verified on iPhone.
-// Does not include proprietary iVerse app binary or commercial comic content.
+// v13.2 phone-only deferred original shelf refresh (experimental, on-device QA pending).
+// No copyrighted commercial application or story assets included.
 // Pocket God Comics owner archive restoration loader.
 // Runs INSIDE the original iVerse binary; does not replace nibs, animations or UI.
 // iOS 7 ARMv7, private on-device test; all external comics are packaged locally.
@@ -14,7 +14,7 @@ static NSDictionary *pgEntriesByID=nil;
 static BOOL pgSeedComplete=NO;
 static const void *PGEntryKey = &PGEntryKey;
 static IMP pgOrigIpadLaunch=NULL,pgOrigPhoneLaunch=NULL;
-static IMP pgOrigIpadLoad=NULL;
+static IMP pgOrigIpadLoad=NULL,pgOrigPhoneAppear=NULL;
 static BOOL pgSeedAttemptRunning=NO, pgRetryScheduled=NO;
 static __weak id pgVisibleIpadShelf=nil;
 static NSArray *pgCoverMigrationProducts=nil;
@@ -500,6 +500,72 @@ static void pgIpadLoad(id self,SEL cmd) {
 // did database seeding and extra reloads during these UI callbacks.
 // Only phone app launch seeds the offline CoreData archive.
 //
+// Phone shelf is different from the iPad: MyComicsViewController.loadShelfView
+// builds a CoreData NSFetchedResultsController using cache "alphabeticalIndex".
+// At launch the controller can precede offline catalog seeding; without a later
+// fetch, a saved catalog can still leave an empty visible iPhone shelf.
+//
+// WARNING: v13's two eager phone hooks crashed in owner device tests.
+// Do NOT seed or synchronously reload inside loadShelfView / viewDidAppear.
+// The ORIGINAL methods remain intact. Only one bounded delayed refresh runs
+// when the original phone view is on screen and CoreData seeding is complete.
+static BOOL pgPhoneShelfRefreshDone=NO;
+static BOOL pgPhoneShelfRefreshPending=NO;
+static NSUInteger pgPhoneShelfRefreshAttempts=0;
+
+static void pgPhoneRefreshOnceLater(id shelf, NSTimeInterval delay) {
+    if(pgPhoneShelfRefreshDone || pgPhoneShelfRefreshPending || !shelf)return;
+    if(pgPhoneShelfRefreshAttempts>=9) {
+        pgDiagnostic(@"PHONE SHELF no more retries: catalog never became ready");
+        return;
+    }
+    pgPhoneShelfRefreshPending=YES;
+    __weak id weakShelf=shelf;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW,(int64_t)(delay*NSEC_PER_SEC)),
+                   dispatch_get_main_queue(), ^{
+        pgPhoneShelfRefreshPending=NO;
+        id strongShelf=weakShelf;
+        if(!strongShelf || pgPhoneShelfRefreshDone)return;
+        id view=[strongShelf respondsToSelector:@selector(view)]?
+                 pgMsg0(strongShelf,@selector(view)):nil;
+        if(!view || ![view respondsToSelector:@selector(window)] ||
+           !pgMsg0(view,@selector(window))) {
+            pgDiagnostic(@"PHONE SHELF no longer visible; wait for next appearance");
+            return;
+        }
+        if(!pgSeedComplete) {
+            ++pgPhoneShelfRefreshAttempts;
+            pgDiagnostic(@"PHONE SHELF waiting for seeded catalog, attempt=%lu",
+                         (unsigned long)pgPhoneShelfRefreshAttempts);
+            pgPhoneRefreshOnceLater(strongShelf,1.25);
+            return;
+        }
+        @try {
+            // Original Database.productsByName creates a fetched-results
+            // controller named "alphabeticalIndex". Its cache may predate
+            // the local catalog created during launch.
+            [NSFetchedResultsController deleteCacheWithName:@"alphabeticalIndex"];
+            SEL load=@selector(loadShelfView);
+            if([strongShelf respondsToSelector:load]) {
+                pgDiagnostic(@"PHONE SHELF one deferred original reload; catalog=%lu",
+                             (unsigned long)[pgEntriesByID count]);
+                pgMsg0(strongShelf,load); // original implementation, no swizzle
+                pgPhoneShelfRefreshDone=YES;
+                pgDiagnostic(@"PHONE SHELF deferred original reload completed");
+            } else {
+                pgDiagnostic(@"PHONE SHELF cannot refresh: missing original loadShelfView");
+            }
+        } @catch(NSException *e) {
+            pgDiagnostic(@"PHONE SHELF deferred original refresh threw: %@ %@",e.name,e.reason);
+        }
+    });
+}
+static void pgPhoneAppearSafe(id self,SEL cmd,BOOL animated) {
+    // Original method (a no-op in this legacy binary), called first.
+    ((void(*)(id,SEL,BOOL))pgOrigPhoneAppear)(self,cmd,animated);
+    if(!pgPhoneShelfRefreshDone)pgPhoneRefreshOnceLater(self,0.8);
+}
+
 // The ORIGINAL iPad shelf calls ComicBundle -initWithFileAtPath: when opening.
 // The earlier offline bridge only patched -initWithProduct:, so it never
 // handled that route. The reader subsequently rejected the missing old-format
@@ -622,7 +688,7 @@ static void pgHook(Class cls,SEL sel,IMP imp,IMP *old) {
 }
 __attribute__((constructor)) static void pgInstallHooks(void) {
     @autoreleasepool {
-        pgDiagnostic(@"Offline content bridge dynamic library loaded; loaderVersion=13.1-PHONE-LIFECYCLE-ROLLBACK");
+        pgDiagnostic(@"Offline content bridge dynamic library loaded; loaderVersion=13.2-PHONE-SAFE-DEFERRED-REFRESH");
         pgLoadManifest();
         Class bundle=NSClassFromString(@"ComicBundle"),database=NSClassFromString(@"Database");
         pgHook(bundle,@selector(initWithProduct:),(IMP)pgBundleInit,&pgOrigBundleInit);
@@ -642,6 +708,9 @@ __attribute__((constructor)) static void pgInstallHooks(void) {
         pgHook(NSClassFromString(@"iVerse_ReaderiPadAppDelegate"),@selector(application:didFinishLaunchingWithOptions:),(IMP)pgIpadLaunch,&pgOrigIpadLaunch);
         pgHook(NSClassFromString(@"iVerse_ReaderAppDelegate"),@selector(application:didFinishLaunchingWithOptions:),(IMP)pgPhoneLaunch,&pgOrigPhoneLaunch);
         pgHook(NSClassFromString(@"ShelfViewController_iPad"),@selector(loadProducts),(IMP)pgIpadLoad,&pgOrigIpadLoad);
+        // Asynchronously refresh original iPhone FRC after catalog ready.
+        // Intentionally DO NOT swizzle original loadShelfView.
+        pgHook(NSClassFromString(@"MyComicsViewController"),@selector(viewDidAppear:),(IMP)pgPhoneAppearSafe,&pgOrigPhoneAppear);
         // v13.1: original phone lifecycle restored; phone-only bridge disabled.
 
         // v13.1: original phone lifecycle restored; phone-only bridge disabled.

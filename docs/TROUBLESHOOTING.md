@@ -8,6 +8,10 @@ Two previous **v11 iPad** builds were reported to crash after automatically open
 
 The owner confirmed this on a v13 Classic 25 iPhone test while the same edition **worked on iPad**. The iPhone's own shelf lifecycle had extra compatibility hooks to seed Core Data during shelf loading and reload it again on appearance. A v13.1 experimental patch disables those extra phone-specific hooks, leaving the original phone shelf controller to load normally. The precise cause is **not confirmed without the phone crash log**. Retesting is required before declaring a fix.
 
+### iPhone no longer crashes, but My Comics shows no books
+
+The owner confirmed v13.1 avoids the immediate iPhone crash but still presents an empty comic shelf. The original phone shelf creates an NSFetchedResultsController whose named cache can predate local offline catalog seeding. v13.2 attempts **one deferred refresh** after the catalog is ready and the phone shelf is visible, with a bounded retry window and no extra synchronous lifecycle seeding. This remains a testable hypothesis until iPhone hardware confirms that the books appear.
+
 ### My Comics has an empty shelf
 
 The original phone and tablet use different controllers. The compatibility bridge hooks both paths, but real-device behavior still needs verification. Record which device/OS and which edition, and whether the catalog remains empty on a repeat launch.
