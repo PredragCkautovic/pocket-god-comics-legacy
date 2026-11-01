@@ -1,0 +1,21 @@
+name: Improvement proposal
+description: Suggest a preservation, documentation, or device compatibility improvement
+title: "[Improvement] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem should this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposed
+    attributes:
+      label: Proposed original-reader-compatible behavior
+    validations:
+      required: true
+  - type: textarea
+    id: devices
+    attributes:
+      label: Target devices and iOS versions

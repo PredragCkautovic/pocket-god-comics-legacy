@@ -1,0 +1,60 @@
+name: Legacy device bug report
+description: Report a reproducible problem on a specific device and iOS version
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please do **not** attach third-party IPAs, proprietary comic pages, passwords, signing identities or unredacted personal device logs.
+  - type: dropdown
+    id: edition
+    attributes:
+      label: Edition
+      options:
+        - Classic 25
+        - Complete 63
+        - Unknown
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Build version
+      placeholder: v13 universal QA
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device model
+      placeholder: iPhone 4, iPad 2...
+    validations:
+      required: true
+  - type: input
+    id: ios
+    attributes:
+      label: iOS version
+      placeholder: 7.1.2, 9.3.5...
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: "1. Cold launch... 2. Open My Comics... 3. Open episode..."
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Expected versus actual behavior
+    validations:
+      required: true
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Privacy check
+      options:
+        - label: I have removed credentials and copyrighted commercial files from this report
+          required: true

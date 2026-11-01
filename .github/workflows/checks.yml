@@ -1,0 +1,27 @@
+name: Public source checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  source-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify public Python utilities compile
+        run: python3 -m py_compile tools/*.py
+      - name: Utilities expose working help
+        run: |
+          python3 tools/inspect_ipa.py --help
+          python3 tools/verify_cover_set.py --help
+      - name: Block publication of proprietary build artifacts
+        run: |
+          if find . -type f \( -iname '*.ipa' -o -iname '*.apk' -o -iname '*.cbz' -o -iname '*.dylib' -o -iname '*.p12' \) | grep .; then
+            echo 'Error: prohibited binary/archive present'
+            exit 1
+          fi
