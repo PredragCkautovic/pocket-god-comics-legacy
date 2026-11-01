@@ -4,6 +4,10 @@
 
 Two previous **v11 iPad** builds were reported to crash after automatically opening My Comics from the app delegate. This behavior was removed in v12 and v13. Use original startup and open My Comics manually. If the new build still crashes, collect sanitized diagnostics before assuming the cause.
 
+### iPhone crashes when opening My Comics
+
+The owner confirmed this on a v13 Classic 25 iPhone test while the same edition **worked on iPad**. The iPhone's own shelf lifecycle had extra compatibility hooks to seed Core Data during shelf loading and reload it again on appearance. A v13.1 experimental patch disables those extra phone-specific hooks, leaving the original phone shelf controller to load normally. The precise cause is **not confirmed without the phone crash log**. Retesting is required before declaring a fix.
+
 ### My Comics has an empty shelf
 
 The original phone and tablet use different controllers. The compatibility bridge hooks both paths, but real-device behavior still needs verification. Record which device/OS and which edition, and whether the catalog remains empty on a repeat launch.

@@ -1,5 +1,5 @@
-// Project-authored v13 compatibility bridge; original commercial binary is not included.
-// Original iVerse interface remains proprietary. Hardware QA still required.
+// v13.1 iPhone My Comics lifecycle isolation; not yet verified on iPhone.
+// Does not include proprietary iVerse app binary or commercial comic content.
 // Pocket God Comics owner archive restoration loader.
 // Runs INSIDE the original iVerse binary; does not replace nibs, animations or UI.
 // iOS 7 ARMv7, private on-device test; all external comics are packaged locally.
@@ -14,7 +14,7 @@ static NSDictionary *pgEntriesByID=nil;
 static BOOL pgSeedComplete=NO;
 static const void *PGEntryKey = &PGEntryKey;
 static IMP pgOrigIpadLaunch=NULL,pgOrigPhoneLaunch=NULL;
-static IMP pgOrigIpadLoad=NULL,pgOrigPhoneAppear=NULL,pgOrigPhoneLoadShelf=NULL;
+static IMP pgOrigIpadLoad=NULL;
 static BOOL pgSeedAttemptRunning=NO, pgRetryScheduled=NO;
 static __weak id pgVisibleIpadShelf=nil;
 static NSArray *pgCoverMigrationProducts=nil;
@@ -495,23 +495,11 @@ static void pgIpadLoad(id self,SEL cmd) {
     ((void (*)(id,SEL))pgOrigIpadLoad)(self,cmd);
     pgPopulateIpadShelf(self);
 } 
-static void pgPhoneLoadShelf(id self,SEL cmd) {
-    // IMPORTANT: original phone My Comics library uses loadShelfView,
-    // while iPad uses ShelfViewController_iPad -loadProducts.
-    pgDiagnostic(@"IPHONE original loadShelfView; seedReady=%d",pgSeedComplete);
-    pgSeedProducts();
-    ((void(*)(id,SEL))pgOrigPhoneLoadShelf)(self,cmd);
-    // Let the original UI load its own Database productsByName and reload data.
-}
-static void pgPhoneAppear(id self,SEL cmd,BOOL animated) {
-    pgSeedProducts();
-    ((void (*)(id,SEL,BOOL))pgOrigPhoneAppear)(self,cmd,animated);
-    // The original implementation is a no-op. Refresh from CoreData when tab
-    // reappears, but do not do repeated work inside the reader.
-    if(pgSeedComplete && [self respondsToSelector:@selector(loadShelfView)]) {
-        pgMsg0(self,@selector(loadShelfView));
-    }
-}
+// v13.1: iPhone's original MyComicsViewController -loadShelfView and
+// -viewDidAppear: remain completely unmodified.  Earlier bridge versions
+// did database seeding and extra reloads during these UI callbacks.
+// Only phone app launch seeds the offline CoreData archive.
+//
 // The ORIGINAL iPad shelf calls ComicBundle -initWithFileAtPath: when opening.
 // The earlier offline bridge only patched -initWithProduct:, so it never
 // handled that route. The reader subsequently rejected the missing old-format
@@ -634,7 +622,7 @@ static void pgHook(Class cls,SEL sel,IMP imp,IMP *old) {
 }
 __attribute__((constructor)) static void pgInstallHooks(void) {
     @autoreleasepool {
-        pgDiagnostic(@"Offline content bridge dynamic library loaded; loaderVersion=13.0-UNIVERSAL-ORIGINAL-START");
+        pgDiagnostic(@"Offline content bridge dynamic library loaded; loaderVersion=13.1-PHONE-LIFECYCLE-ROLLBACK");
         pgLoadManifest();
         Class bundle=NSClassFromString(@"ComicBundle"),database=NSClassFromString(@"Database");
         pgHook(bundle,@selector(initWithProduct:),(IMP)pgBundleInit,&pgOrigBundleInit);
@@ -654,7 +642,9 @@ __attribute__((constructor)) static void pgInstallHooks(void) {
         pgHook(NSClassFromString(@"iVerse_ReaderiPadAppDelegate"),@selector(application:didFinishLaunchingWithOptions:),(IMP)pgIpadLaunch,&pgOrigIpadLaunch);
         pgHook(NSClassFromString(@"iVerse_ReaderAppDelegate"),@selector(application:didFinishLaunchingWithOptions:),(IMP)pgPhoneLaunch,&pgOrigPhoneLaunch);
         pgHook(NSClassFromString(@"ShelfViewController_iPad"),@selector(loadProducts),(IMP)pgIpadLoad,&pgOrigIpadLoad);
-        pgHook(NSClassFromString(@"MyComicsViewController"),@selector(loadShelfView),(IMP)pgPhoneLoadShelf,&pgOrigPhoneLoadShelf);
-        pgHook(NSClassFromString(@"MyComicsViewController"),@selector(viewDidAppear:),(IMP)pgPhoneAppear,&pgOrigPhoneAppear);
+        // v13.1: original phone lifecycle restored; phone-only bridge disabled.
+
+        // v13.1: original phone lifecycle restored; phone-only bridge disabled.
+
     }
 }
