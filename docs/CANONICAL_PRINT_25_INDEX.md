@@ -1,4 +1,6 @@
-# Canonical 25 original Pocket God print issues
+# Original Pocket God numbered issues — provisional WEBTOON story reconstruction
+
+> **Provenance warning:** This is a *story reconstruction* from creator WEBTOON chapters, not evidence that the project holds the original separately sold iVerse issue files. The 25 entries are original numbered *digital/print series issues*; not every numbered issue had a separately printed physical release. See [original issue source recovery](ORIGINAL_SOURCE_RECOVERY.md).
 
 These are the **25 original numbered issues**, **not** the first 25 WEBTOON posts.
 The private v16 story rebuild combines chapters that the creators later split when republishing the comic on WEBTOON.

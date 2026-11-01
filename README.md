@@ -26,7 +26,7 @@
 | Reading | Offline, for content already packaged locally | Offline, for content already packaged locally |
 | Status | Built; awaiting hardware QA | Built; awaiting hardware QA |
 
-> **Correct indexing as of v16:** Classic 25 now reconstructs 25 original printed issue **stories** from 53 creator-reposted WEBTOON segments. It does not claim lost print-only bonus, editorial or advertisement pages. Complete 63 preserves all 63 WEBTOON posts in chronological order, including mini-stories, recap and updates. See the [25-issue map](docs/CANONICAL_PRINT_25_INDEX.md) and [63-chapter index](docs/WEBTOON_63_CHAPTER_INDEX.md).
+> **Source fidelity update:** The v16 Classic 25 library reconstructs the **stories of 25 original numbered issues** using creator-reposted WEBTOON chapters. **Original iVerse purchased issue-page files have not been recovered yet**, so it is not a verified facsimile of the original issues. The v16 package is a provisional comparison build, not the release-quality source. Complete 63 is a separate WEBTOON chapter chronology. See [original issue source recovery](docs/ORIGINAL_SOURCE_RECOVERY.md), [25-issue map](docs/CANONICAL_PRINT_25_INDEX.md) and [63-chapter index](docs/WEBTOON_63_CHAPTER_INDEX.md).
 
 ## 📱 Hardware and OS targets
 
@@ -73,7 +73,8 @@ The original reader stays in place. An Objective-C bridge supplies offline entri
 - [x] Remove automatic shelf startup after reported crashes
 - [x] Verify IPA structure, content bytes, cover mapping and bundle metadata
 - [ ] Verify reliable operation on physical iPhone 4 / 4S and iPad hardware
-- [x] Reconstruct 25 original issue **stories** from verified WEBTOON chapter segments and match all 25 original issue covers
+- [x] Reconstruct provisional issue **stories** from WEBTOON chapter segments and match 25 original covers
+- [ ] Recover authentic original iVerse issue-page assets for all 25 numbered issues
 - [ ] Recover additional print-only bonus/editorial material if rights-authorized source becomes available
 - [ ] Publish reproducible, hardware-tested release procedures
 - [ ] Explore modern iOS and Android editions as separate work
@@ -90,6 +91,7 @@ tools/inspect_ipa.py       Read-only local IPA/manifest inspection
 tools/verify_cover_set.py  Validates individually numbered cover images
 docs/ARCHITECTURE.md       Original-reader integration and design
 docs/CANONICAL_PRINT_25_INDEX.md  Verified original 25 issue/story map
+docs/ORIGINAL_SOURCE_RECOVERY.md  Original issue authenticity, covers and special-source status
 docs/WEBTOON_63_CHAPTER_INDEX.md  Chronological 63 creator chapter index
 docs/COMPATIBILITY.md      iOS and device targeting
 docs/INSTALLATION.md       Preflight, backups, manual library navigation
