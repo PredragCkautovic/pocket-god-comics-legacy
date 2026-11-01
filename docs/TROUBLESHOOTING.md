@@ -12,7 +12,11 @@ The owner confirmed this on a v13 Classic 25 iPhone test while the same edition 
 
 The owner compared v13.2 diagnostics from iPhone 4 and iPhone 4S. Both created all 25 offline Core Data records. On iPhone 4, the final log event was entry into the deferred second call to the original My Comics shelf loader; the app later restarted. On iPhone 4S, that call returned and all 25 cover records finished processing. This strongly suggests the repeated shelf reload is unsafe on iPhone 4, but the actual termination reason requires an iOS crash report.
 
-v13.3 removes the repeat loadShelfView call entirely. It clears the named FRC cache before original phone startup and refetches the existing controller after the catalog is ready, then reloads its original table view. The iPad code is left untouched. **v13.3 is an unverified test build, not a confirmed repair.**
+v13.3 removes the repeat loadShelfView call entirely and refetches the existing phone controller after the catalog is ready, then reloads its original table view. The earlier assumption that alphabeticalIndex was a named cache was incorrect: it is the original section-name key path, and the original controller has no named cache. The iPad code is left untouched. **v13.3 is an unverified test build, not a confirmed repair.**
+
+### v13.3 stable iPhones, but no books: Core Data error 134060
+
+Both owner-supplied v13.3 logs successfully seed 25 of 25 offline entries yet report an unsuccessful NSFetchedResultsController fetch (Core Data 134060). Investigation of the original iVerse executable confirmed that `Database.productsByName` sorts first by `Product.sortName`, but sections are derived from `Product.alphabeticalIndex` (the first character of `Product.name`). Old offline builds saved identifiers like `pg.offline.001` as sortName while retaining natural chapter titles in name. This violates the controller's alphabetical section order. **v14** now stores the displayed title as sortName, including an in-place migration for already installed entries, and logs fetch-error details if the problem persists. Do not delete the device's app data merely to apply this fix. Real-device confirmation is still pending.
 
 ### iPhone no longer crashes, but My Comics shows no books
 

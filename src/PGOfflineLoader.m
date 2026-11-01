@@ -1,5 +1,5 @@
-// v13.3: owner iPhone 4 logs suggest repeat loadShelfView crash; safe existing FRC fetch
-// Source only; commercial iVerse binary and story content not included.
+// v14: correct Product.sortName to match original alphabetical sections.
+// Project-authored bridge source only; commercial application and comics are not included.
 // Pocket God Comics owner archive restoration loader.
 // Runs INSIDE the original iVerse binary; does not replace nibs, animations or UI.
 // iOS 7 ARMv7, private on-device test; all external comics are packaged locally.
@@ -136,6 +136,72 @@ static BOOL pgAttachImage(NSManagedObjectContext *context, NSManagedObject *prod
         return NO;
     }
 }
+// The original phone reader's Database.productsByName fetch sorts first by
+// Product.sortName, but groups by Product.alphabeticalIndex, which is computed
+// by taking the FIRST character of Product.name. If sortName uses an episode
+// identifier (pg.offline.001) while name is a natural chapter title, fetched
+// sections become out-of-order and FRC -performFetch: fails (Core Data 134060).
+//
+// v14 repairs BOTH old persisted records and newly seeded records in-place.
+// Do not delete or recreate an installed comic or alter its reading progress.
+static BOOL pgRepairOfflineSortNames(NSManagedObjectContext *context) {
+    if(!context || ![pgEntriesByID count])return NO;
+    NSFetchRequest *request=[NSFetchRequest fetchRequestWithEntityName:@"Product"];
+    [request setPredicate:[NSPredicate predicateWithFormat:
+                           @"productID BEGINSWITH %@",@"pg.offline."]];
+    NSError *error=nil;
+    NSArray *products=[context executeFetchRequest:request error:&error];
+    if(error || !products) {
+        pgDiagnostic(@"SORT FIX fetch failed domain=%@ code=%ld %@",
+                     [error domain],(long)[error code],[error localizedDescription]);
+        return NO;
+    }
+    NSUInteger repaired=0,missing=0;
+    @try {
+        for(NSManagedObject *product in products) {
+            NSString *pid=[product valueForKey:@"productID"];
+            NSDictionary *entry=[pgEntriesByID objectForKey:pid];
+            if(!entry)continue;
+            NSString *expectedTitle=[entry objectForKey:@"title"];
+            if(![expectedTitle isKindOfClass:[NSString class]] ||
+               ![expectedTitle length]) {
+                missing++;
+                continue;
+            }
+            NSString *name=[product valueForKey:@"name"];
+            if(![name isKindOfClass:[NSString class]] || ![name length]) {
+                [product setValue:expectedTitle forKey:@"name"];
+                name=expectedTitle;
+            }
+            NSString *oldSort=[product valueForKey:@"sortName"];
+            // Alphabetical section key is derived from 'name', so match that
+            // exact displayed title for native sort order and section order.
+            if(![oldSort isKindOfClass:[NSString class]] ||
+               ![oldSort isEqualToString:name]) {
+                [product setValue:name forKey:@"sortName"];
+                repaired++;
+            }
+        }
+        if([context hasChanges]) {
+            NSError *saveError=nil;
+            if(![context save:&saveError]) {
+                pgDiagnostic(@"SORT FIX save failed domain=%@ code=%ld %@",
+                             [saveError domain],(long)[saveError code],
+                             [saveError localizedDescription]);
+                [context rollback];
+                return NO;
+            }
+        }
+    } @catch(NSException *exception) {
+        [context rollback];
+        pgDiagnostic(@"SORT FIX exception %@ %@",exception.name,exception.reason);
+        return NO;
+    }
+    pgDiagnostic(@"SORT FIX complete: repaired=%lu missingTitle=%lu indexed=%lu; first sort key matches section title",
+                 (unsigned long)repaired,(unsigned long)missing,
+                 (unsigned long)[products count]);
+    return missing==0;
+}
 static void pgSeedProducts(void) {
     if(pgSeedComplete || pgSeedAttemptRunning)return;
     pgLoadManifest();
@@ -161,9 +227,11 @@ static void pgSeedProducts(void) {
     NSError *quickError=nil;
     NSUInteger existing=[context countForFetchRequest:quickCount error:&quickError];
     if (!quickError && existing==[pgEntriesByID count]) {
-        pgSeedComplete=YES;
+        // Old 13.x installations already contain 25/63 rows, so a row COUNT
+        // alone is NOT enough. Their sortName values need in-place migration.
+        pgSeedComplete=pgRepairOfflineSortNames(context);
         pgSeedAttemptRunning=NO;
-        pgScheduleCoverMigration();
+        if(pgSeedComplete)pgScheduleCoverMigration();
         return;
     }
     pgDiagnostic(@"Catalog recovery required: existing=%lu target=%lu error=%@",
@@ -220,8 +288,9 @@ static void pgSeedProducts(void) {
                 product=[NSEntityDescription insertNewObjectForEntityForName:@"Product" inManagedObjectContext:context];
                 [product setValue:identifier forKey:@"productID"];
                 [product setValue:offlineSupplier forKey:@"supplier"];
-                [product setValue:[entry objectForKey:@"title"] ?: identifier forKey:@"name"];
-                [product setValue:identifier forKey:@"sortName"];
+                NSString *title=[entry objectForKey:@"title"] ?: identifier;
+                [product setValue:title forKey:@"name"];
+                [product setValue:title forKey:@"sortName"];
                 [product setValue:[NSNumber numberWithInt:[[entry objectForKey:@"episode"] intValue]] forKey:@"number"];
                 [product setValue:@"comic" forKey:@"productType"];
                 [product setValue:[NSNumber numberWithBool:YES] forKey:@"completed"];
@@ -260,7 +329,7 @@ static void pgSeedProducts(void) {
                          (unsigned long)created,(unsigned long)rejected,(unsigned long)found,
                          (unsigned long)[pgEntriesByID count],countError);
             if(!countError && found==[pgEntriesByID count]) {
-                pgSeedComplete=YES;
+                pgSeedComplete=pgRepairOfflineSortNames(context);
                 // The original app's aged CoreData image transformer can freeze
                 // the UI when 63 covers are serialized synchronously.
                 // The asynchronous 3-at-a-time migration seeds every missing
@@ -435,11 +504,10 @@ static BOOL pgIpadLaunch(id self,SEL cmd,id app,id options) {
 // RESTORED: original iVerse iPhone decides which tab to show on launch.
 static BOOL pgPhoneLaunch(id self,SEL cmd,id app,id options) {
     pgDiagnostic(@"iPhone original launch path, no automatic tab switching");
-    // Purge stale named FRC cache before any phone shelf can create/use it.
-    // v13.2 deleted the cache after the FRC was already alive, then called
-    // loadShelfView a second time; that is unsafe on owner iPhone 4.
-    [NSFetchedResultsController deleteCacheWithName:@"alphabeticalIndex"];
-    pgDiagnostic(@"PHONE SHELF named FRC cache cleared before original launch");
+    // Original Database.productsByName uses sectionNameKeyPath:
+    // @"alphabeticalIndex" and cacheName:nil. Do not confuse a section field
+    // with a cache identifier or delete an unrelated cache on launch.
+    pgDiagnostic(@"PHONE SHELF using original alphabetical sections; catalog sort fix enabled");
     BOOL ok=((BOOL (*)(id,SEL,id,id))pgOrigPhoneLaunch)(self,cmd,app,options);
     pgSeedProducts();
     pgScheduleSeedRetry();
@@ -565,8 +633,11 @@ static void pgPhoneRefreshOnceLater(id shelf, NSTimeInterval delay) {
             NSError *fetchError=nil;
             BOOL loaded=[frc performFetch:&fetchError];
             if(!loaded || fetchError) {
-                pgDiagnostic(@"PHONE SHELF FRC fetch failed: %@",
-                             fetchError?[fetchError localizedDescription]:@"no details");
+                NSArray *descriptors=[[frc fetchRequest] sortDescriptors];
+                pgDiagnostic(@"PHONE SHELF FRC fetch failed domain=%@ code=%ld reason=%@ userInfo=%@; section=%@ sort=%@",
+                             [fetchError domain],(long)[fetchError code],
+                             [fetchError localizedDescription],[fetchError userInfo],
+                             [frc sectionNameKeyPath],descriptors);
                 return;
             }
             NSUInteger after=[[frc fetchedObjects] count];
@@ -715,7 +786,7 @@ static void pgHook(Class cls,SEL sel,IMP imp,IMP *old) {
 }
 __attribute__((constructor)) static void pgInstallHooks(void) {
     @autoreleasepool {
-        pgDiagnostic(@"Offline content bridge dynamic library loaded; loaderVersion=13.3-PHONE-FRC-REFETCH");
+        pgDiagnostic(@"Offline content bridge dynamic library loaded; loaderVersion=14.0-ALPHABETICAL-SORT-REPAIR");
         pgLoadManifest();
         Class bundle=NSClassFromString(@"ComicBundle"),database=NSClassFromString(@"Database");
         pgHook(bundle,@selector(initWithProduct:),(IMP)pgBundleInit,&pgOrigBundleInit);
