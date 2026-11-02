@@ -48,14 +48,24 @@ jobs:
               assert len(catalog)==25 and sum(len(i["pages"]) for i in catalog)==654
               (dest/"native_catalog.json").write_bytes(z.read(app+"native_catalog.json"))
               images=set()
+              covers=set()
               for item in catalog:
                   images.update(item["pages"])
-              for path in images:
+                  covers.add(item["thumbnail"])
+                  covers.add(item["cover"])
+              for path in images | covers:
                   filename=app+"web/"+path
                   data=z.read(filename)
                   target=dest/"web"/path
                   target.parent.mkdir(parents=True,exist_ok=True)
                   target.write_bytes(data)
+              for item in catalog:
+                  thumb=dest/"web"/item["thumbnail"]
+                  cover=dest/"web"/item["cover"]
+                  assert thumb.is_file() and thumb.stat().st_size>1000, item["thumbnail"]
+                  assert cover.is_file() and cover.stat().st_size>1000, item["cover"]
+                  assert thumb.read_bytes()[:3]==b"\\xff\\xd8\\xff", "Invalid JPEG thumbnail"
+              print("Verified 25 distinct bundled cover thumbnails")
               for name in z.namelist():
                   if name.startswith(app+"web/assets/ipa_original/") and not name.endswith("/"):
                       target=dest/name[len(app):]
@@ -109,6 +119,12 @@ jobs:
               assert len(data)==25
               assert sum(len(i["pages"]) for i in data)==654
               assert all("assets/web/"+p in names for i in data for p in i["pages"])
+              for issue in data:
+                  assert "assets/web/"+issue["thumbnail"] in names, "Missing cover thumbnail: "+issue["id"]
+                  assert "assets/web/"+issue["cover"] in names, "Missing cover image: "+issue["id"]
+                  image=z.read("assets/web/"+issue["thumbnail"])
+                  assert image[:3]==b"\\xff\\xd8\\xff", "Unreadable JPEG thumbnail: "+issue["id"]
+              print("Verified original 25 cover thumbnails and fallback covers in APK")
               assert "classes.dex" in names
               assert "AndroidManifest.xml" in names
               for asset in ("shelf_icon@2x.png","list_icon@2x.png","bookmark@2x.png","single_page_spread_white@2x.png","two_page_spread_white@2x.png"):
