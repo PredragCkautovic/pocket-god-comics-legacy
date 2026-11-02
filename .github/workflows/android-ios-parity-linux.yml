@@ -73,9 +73,17 @@ jobs:
       - name: Configure Android SDK from Linux image
         run: |
           echo "ANDROID_HOME=$ANDROID_HOME"
-          sdkmanager --version
-          yes | sdkmanager --licenses > /dev/null || true
-          sdkmanager "platforms;android-35" "build-tools;35.0.0"
+          MANAGER="$(find "$ANDROID_HOME" -type f -name sdkmanager -print -quit)"
+          if [ -z "$MANAGER" ]; then
+            mkdir -p "$ANDROID_HOME/cmdline-tools"
+            curl -fL --retry 3 -o /tmp/android-commandlinetools.zip "https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip"
+            unzip -q /tmp/android-commandlinetools.zip -d "$ANDROID_HOME/cmdline-tools/"
+            mv "$ANDROID_HOME/cmdline-tools/cmdline-tools" "$ANDROID_HOME/cmdline-tools/latest"
+            MANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          fi
+          "$MANAGER" --version
+          yes | "$MANAGER" --licenses > /dev/null || true
+          "$MANAGER" "platforms;android-35" "build-tools;35.0.0"
 
       - name: Gradle
         uses: gradle/actions/setup-gradle@v4
