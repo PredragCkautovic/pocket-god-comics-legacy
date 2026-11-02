@@ -120,13 +120,20 @@ def main():
         for number, issue in enumerate(issues, 1):
             folder = f"PGOffline/{number:03d}/"
             root = prefix + folder
-            cover = legacy.read(root + "cover.jpg")
-            files = ["0000.jpg", *issue["pages"]]
+            # The legacy v17 manifest already counts the corrected cover as
+            # its FIRST reading image. Do not insert it again.
+            files = issue["pages"]
             relroot = f"assets/official/{number:03d}"
             sources = []
-            for filename in files:
-                data = cover if filename == "0000.jpg" else legacy.read(root + filename)
-                rel = f"{relroot}/{filename}"
+            cover = legacy.read(root + files[0])
+            listed_cover = legacy.read(root + issue["cover"])
+            if cover != listed_cover:
+                raise RuntimeError(f"Cover mismatch in source issue {number}")
+            for index, original_filename in enumerate(files):
+                data = legacy.read(root + original_filename)
+                extension = Path(original_filename).suffix.lower()
+                normalized_filename = f"{index:04d}{extension}"
+                rel = f"{relroot}/{normalized_filename}"
                 add_bytes(web / rel, data)
                 expected_images[rel] = hashlib.sha256(data).hexdigest()
                 sources.append(rel)
