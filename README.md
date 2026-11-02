@@ -48,6 +48,10 @@ The iOS and Android versions use the same library and aim for the same look and 
 
 I've also kept the [legacy iOS release](https://github.com/PredragCkautovic/pocket-god-comics-legacy/releases/tag/legacy-v17) available for older hardware, including the iPhone 4, iPhone 4S, and iPad 2.
 
+## Future Pocket God Definitive (Nintendo Switch)
+
+I'm keeping any comic-inspired gameplay separate from the original Pocket God port. The [Comic-to-Definitive content bible](docs/COMICS_TO_SWITCH_PORT_BIBLE.md) maps the nine story arcs, required story evidence, and rules for an optional future Comics Expansion. No comic-only feature is presented as original iOS gameplay.
+
 ## About this project
 
 This is an independent, unofficial preservation project. I wanted Pocket God Comics to remain usable without relying on its discontinued online services, while staying as close as practical to the original reader.
