@@ -74,6 +74,16 @@ jobs:
           print("Verified original 25 issues / 654 pages, extracted",len(images),"media files")
           PY
 
+      - name: Python runtime for source artwork
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Generate Android launcher icon from the original iVerse icon
+        run: |
+          python3 -m pip install Pillow
+          python3 android-app/tools/create_launcher_icons.py android-app/app/src/main/assets/web/assets/ipa_original/icon@2x.png
+
       - name: Configure Java 17
         uses: actions/setup-java@v4
         with:
@@ -125,6 +135,11 @@ jobs:
                   image=z.read("assets/web/"+issue["thumbnail"])
                   assert image[:3]==bytes((255,216,255)), "Unreadable JPEG thumbnail: "+issue["id"]
               print("Verified original 25 cover thumbnails and fallback covers in APK")
+              icons=[n for n in names if n.startswith("res/mipmap-") and n.endswith("/ic_launcher.png")]
+              assert len(icons)==5, "Expected launcher icon in five Android density folders"
+              for name in icons:
+                  assert z.read(name).startswith(bytes((137,80,78,71,13,10,26,10))), name
+              print("Original Pocket God Comics launcher icon present in 5 Android densities")
               assert "classes.dex" in names
               assert "AndroidManifest.xml" in names
               for asset in ("shelf_icon@2x.png","list_icon@2x.png","bookmark@2x.png","single_page_spread_white@2x.png","two_page_spread_white@2x.png"):
