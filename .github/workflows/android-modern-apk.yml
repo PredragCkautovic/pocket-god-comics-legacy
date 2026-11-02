@@ -1,0 +1,100 @@
+name: Pocket God Comics Android APK Test Build
+
+'on':
+  push:
+    branches:
+      - modern-3.0.0-rc1-ci
+    paths:
+      - "android-app/**"
+      - "modern-ios/build-ci.py"
+      - ".github/workflows/android-modern-apk.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-android-apk:
+    name: Build offline Android 25-issue reader APK
+    runs-on: macos-15
+    timeout-minutes: 55
+    steps:
+      - name: Checkout isolated native branches
+        uses: actions/checkout@v4
+
+      - name: Python and Pillow
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Pillow
+        run: python3 -m pip install Pillow
+
+      - name: Produce verified original 25-issue asset bundle
+        run: python3 modern-ios/build-ci.py
+
+      - name: Stage Android original-asset bundle
+        run: |
+          mkdir -p android-app/app/src/main/assets
+          cp -R modern-ios/build/Payload/PocketGodComics.app/web android-app/app/src/main/assets/web
+          cp modern-ios/build/Payload/PocketGodComics.app/native_catalog.json android-app/app/src/main/assets/native_catalog.json
+          python3 - <<'PY'
+          from pathlib import Path
+          from PIL import Image
+          src=Path("modern-ios/build/Payload/PocketGodComics.app/web/assets/ipa_original/icon@2x.png")
+          dst=Path("android-app/app/src/main/res/drawable-nodpi/app_icon.png")
+          dst.parent.mkdir(parents=True,exist_ok=True)
+          with Image.open(src) as i:
+              i.convert("RGBA").resize((192,192),Image.Resampling.LANCZOS).save(dst)
+          print("Native Android assets staged", sum(1 for _ in Path("android-app/app/src/main/assets/web").rglob("*") if _.is_file()))
+          PY
+
+      - name: Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android 35 platform and build tools
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Gradle 8.10.2
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.10.2"
+
+      - name: Compile native Android APK
+        working-directory: android-app
+        run: gradle :app:assembleDebug --no-daemon --stacktrace
+
+      - name: Validate APK issue assets and metadata
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+          import hashlib,json
+          apk=Path("android-app/app/build/outputs/apk/debug/app-debug.apk")
+          assert apk.is_file() and apk.stat().st_size>1_000_000
+          with ZipFile(apk) as z:
+              assert z.testzip() is None
+              names=set(z.namelist())
+              catalog=json.loads(z.read("assets/native_catalog.json"))
+              assert len(catalog)==25 and sum(len(x["pages"]) for x in catalog)==654
+              for issue in catalog:
+                  for path in issue["pages"]:
+                      assert "assets/web/"+path in names,path
+              assert "classes.dex" in names and "AndroidManifest.xml" in names
+          print("APK_QA_PASS", "issues=25", "pages=654", "bytes="+str(apk.stat().st_size),
+                "sha256="+hashlib.sha256(apk.read_bytes()).hexdigest())
+          PY
+
+      - name: Upload Android debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Pocket_God_Comics_Android_0.1_Alpha_APK
+          path: android-app/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
+          if-no-files-found: error
