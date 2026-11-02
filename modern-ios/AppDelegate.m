@@ -204,19 +204,28 @@ static NSArray *PGLibrary(void) {
     self.page=(NSInteger)lround(slider.value);
     [self showPage];
 }
+- (void)showPageWithCurlForward:(BOOL)forward {
+    // UIKit page-curl transition: authentic reader gesture, still approximate
+    // until original iVerse timing is measured on a reference iPad.
+    UIViewAnimationOptions curl=forward?UIViewAnimationOptionTransitionCurlUp:UIViewAnimationOptionTransitionCurlDown;
+    [UIView transitionWithView:self.image duration:.33
+                      options:curl|UIViewAnimationOptionAllowUserInteraction
+                   animations:^{[self showPage];}
+                   completion:nil];
+}
 - (void)nextPage {
     if(self.zoom.zoomScale>1.01)return;
     NSInteger count=[(NSArray *)self.issue[@"pages"] count];
     NSInteger step=[self usingTwoPage] && self.page>0?2:1;
     NSInteger candidate=self.page+step;
-    if(candidate<count){self.page=candidate;[self showPage];}
+    if(candidate<count){self.page=candidate;[self showPageWithCurlForward:YES];}
     else [self showBookEnd];
 }
 - (void)previousPage {
     if(self.zoom.zoomScale>1.01)return;
     if(self.page<=0)return;
     NSInteger step=[self usingTwoPage] && self.page>1?2:1;
-    self.page=MAX(0,self.page-step);[self showPage];
+    self.page=MAX(0,self.page-step);[self showPageWithCurlForward:NO];
 }
 static void PGDrawImageFitted(UIImage *image,CGRect slot){
     if(!image)return;
@@ -259,6 +268,7 @@ static void PGDrawImageFitted(UIImage *image,CGRect slot){
     self.image.accessibilityLabel=[NSString stringWithFormat:@"%@ page %ld",self.issue[@"title"],(long)self.page+1];
     [self updateBookmarkAppearance];
     self.scrubber.maximumValue=(float)MAX(0,(NSInteger)pages.count-1);
+    self.scrubber.accessibilityValue=self.counter.text;
     [self.scrubber setValue:(float)self.page animated:NO];
     [[NSUserDefaults standardUserDefaults] setInteger:self.page forKey:[@"native-progress-" stringByAppendingString:self.issue[@"id"]]];
     [[NSUserDefaults standardUserDefaults] setObject:self.issue[@"id"] forKey:@"native-last-issue"];
