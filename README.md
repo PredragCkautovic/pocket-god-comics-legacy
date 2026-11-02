@@ -13,7 +13,7 @@
 
 **The mission:** preserve the look, navigation and page-turning experience of the original iVerse-based Pocket God Comics app on older Apple hardware. This project explores offline comic access while keeping the **real iPhone and iPad reader interfaces**, rather than replacing them with a generic web viewer.
 
-**This public repository contains original compatibility code and project documentation.** It does **not** distribute the proprietary iVerse app, Pocket God Comics story pages, original artwork, IPA binaries or other third-party media. Current test builds with bundled media remain in a separate private repository, pending redistribution-rights review.
+**Public legacy release:** The repository provides project compatibility source and documentation; the v17 GitHub release additionally provides a free legacy IPA containing third-party material on the maintainer’s representation of noncommercial redistribution permission. Third-party material is not declared GPLv3. See [release rights statement](docs/RELEASE_RIGHTS_V17.md).
 
 ---
 
@@ -146,7 +146,7 @@ Issues are organized into [v13 universal hardware QA](https://github.com/Predrag
 
 **Unofficial, unaffiliated preservation work.** Pocket God, Pocket God Comics, iVerse, related characters, comic stories, trademarks, commercial applications and original art belong to their respective rights holders. This repository does not grant redistribution rights for any third-party materials. A personal offline archive does not itself authorize public redistribution.
 
-The project-specific compatibility code is visible for review; **no explicit open-source reuse license has yet been selected**. Public repository visibility is not a license grant. See [Provenance and rights](docs/PROVENANCE.md).
+The project-specific compatibility code is visible for review; **no explicit open-source reuse license has yet been selected for project-authored code**. Public repository visibility is not a license grant. See [Provenance and rights](docs/PROVENANCE.md).
 
 *Preserve the story. Preserve the reader. Document what actually works.*
 
