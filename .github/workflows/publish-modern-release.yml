@@ -31,7 +31,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: Pocket_God_Comics_Android_iOS_Parity_TEST
-          run-id: 41484313305
+          run-id: 41490839763
           repository: PredragCkautovic/pocket-god-comics-legacy
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: android-build
@@ -47,7 +47,7 @@ jobs:
           apk = Path("android-build/app-debug.apk")
           expected = {
               "ios": ("c01b1c5a1ab070eb654d6d57e1890b2587d8539554bea5bb55ec21cb313075b7", 187124893),
-              "android": ("e77be32a6f920c0977a64cb74912957171cf778a0835ef55cdf7c8cbc11b37a1", 187843116),
+              "android": ("4e463f69bf9b4c2f797fbf77afb40d5a91aef72b733b96309df262e9277dedc0", 188026708),
           }
           for platform, path in (("ios",ipa),("android",apk)):
               assert path.is_file(), f"Missing {platform} binary: {path}"
@@ -91,7 +91,7 @@ jobs:
           cat > /tmp/release-notes.md <<'EOF'
           Pocket God Comics for modern iOS and Android.
 
-          Both versions include the offline 25-issue collection (654 pages), the classic My Comics bookshelf, fullscreen reader, search, bookmarks, reading progress, and CBZ imports. The Pocket God banner has been removed so the comic library uses the full screen. Android includes the corrected original cover art.
+          Both versions include the offline 25-issue collection (654 pages), the classic My Comics bookshelf, fullscreen reader, search, bookmarks, reading progress, and CBZ imports. The Pocket God banner has been removed so the comic library uses the full screen. Android includes the corrected original cover art and the original Pocket God Comics launcher icon.
 
           **Downloads**
           - **Pocket God Comics.ipa** — native 64-bit iPhone/iPad app (iOS 12+). Install through a compatible signing or sideloading method.
@@ -99,7 +99,9 @@ jobs:
 
           Older debug-signed Android builds may have a different signature. Back up imported comics and reading progress before reinstalling.
 
-          The original legacy iOS release remains available separately. This is an unofficial preservation project, not affiliated with the original rights holders.
+          The original Legacy v17 iOS app is available as a separate, preserved release for older devices: https://github.com/PredragCkautovic/pocket-god-comics-legacy/releases/tag/legacy-v17
+
+          This is an unofficial preservation project, not affiliated with the original rights holders.
           EOF
 
       - name: Publish or update the modern GitHub release
@@ -116,6 +118,31 @@ jobs:
             gh release create "$TAG"               "publish/Pocket God Comics.ipa"               "publish/Pocket God Comics.apk"               --repo "$GITHUB_REPOSITORY"               --target main               --title "Pocket God Comics — iOS & Android"               --notes-file /tmp/release-notes.md
           fi
 
+      - name: Preserve Legacy v17 release and correct its description
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,subprocess
+          repo=os.environ["GITHUB_REPOSITORY"]
+          legacy=json.loads(subprocess.check_output(["gh","api",f"repos/{repo}/releases/tags/legacy-v17"]))
+          files=[x for x in legacy["assets"] if x["name"]=="Pocket_God_Comics_Legacy.ipa"]
+          assert len(files)==1 and files[0]["state"]=="uploaded" and files[0]["size"]==248676483, "Legacy IPA must remain available"
+          print("PRESERVED LEGACY:",files[0]["browser_download_url"])
+          PY
+          cat > /tmp/legacy-notes.md <<'EOF'
+          Pocket God Comics Legacy v17 — the classic 32-bit iOS reader for older Apple devices.
+
+          Tested on the iPhone 4, iPhone 4S, and iPad 2. Includes 25 numbered comics with their corrected cover artwork for offline reading.
+
+          Download **Pocket_God_Comics_Legacy.ipa** below. This legacy release is retained separately from the modern iOS and Android editions.
+
+          This is an unofficial preservation project and is not affiliated with the original rights holders.
+          EOF
+          gh release edit legacy-v17 --repo "$GITHUB_REPOSITORY" --notes-file /tmp/legacy-notes.md
+
       - name: Confirm exactly two assets are public
         shell: bash
         env:
@@ -130,7 +157,7 @@ jobs:
           names=sorted(item["name"] for item in assets)
           # GitHub Release assets normalize spaces into dots on upload.
           assert names==["Pocket.God.Comics.apk","Pocket.God.Comics.ipa"],names
-          expected_bytes={"Pocket.God.Comics.apk":187843116,"Pocket.God.Comics.ipa":187124893}
+          expected_bytes={"Pocket.God.Comics.apk":188026708,"Pocket.God.Comics.ipa":187124893}
           for item in assets:
               assert item["state"]=="uploaded" and item["size"]==expected_bytes[item["name"]]
               print("PUBLISHED",item["name"],item["size"],item["browser_download_url"])
