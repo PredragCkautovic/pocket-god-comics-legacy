@@ -10,7 +10,11 @@ import android.graphics.Paint;
 import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.GestureDetector;
 import android.view.Gravity;
 import android.view.MotionEvent;
@@ -18,6 +22,7 @@ import android.view.ScaleGestureDetector;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.SeekBar;
@@ -25,6 +30,8 @@ import android.widget.TextView;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public final class ReaderActivity extends Activity {
     private JSONObject book;
@@ -35,7 +42,12 @@ public final class ReaderActivity extends Activity {
     private boolean barsVisible=true;
     private FrameLayout root;
     private LinearLayout top,bottom;
-    private TextView counter, title,bookmark;
+    private TextView counter, title;
+    private ImageView bookmark;
+    private ImageView singlePageIcon, twoPageIcon;
+    private final Handler ui=new Handler(Looper.getMainLooper());
+    private final ExecutorService imageWorker=Executors.newSingleThreadExecutor();
+    private boolean turning=false;
     private ComicCanvas surface;
     private SeekBar scrubber;
     private boolean changing=false;
@@ -70,8 +82,21 @@ public final class ReaderActivity extends Activity {
     }
     GradientDrawable bg(){
         GradientDrawable d=new GradientDrawable();
-        d.setColor(Color.argb(241,11,51,63));d.setStroke(dp(1),Color.rgb(109,165,165));
-        d.setCornerRadius(dp(4));return d;
+        // The original UIKit reader uses translucent black chrome, not teal UI panels.
+        d.setColor(Color.argb(199,0,0,0));
+        return d;
+    }
+    ImageView originalIcon(String path,String label,int width,int height){
+        ImageView icon=new ImageView(this);
+        icon.setImageBitmap(ComicStore.bitmap(this,path,256));
+        icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        icon.setPadding(dp(4),dp(3),dp(4),dp(3));
+        icon.setContentDescription(label);
+        return icon;
+    }
+    void updateModeIcons(){
+        if(singlePageIcon!=null)singlePageIcon.setAlpha(doublePage?.55f:1f);
+        if(twoPageIcon!=null)twoPageIcon.setAlpha(doublePage?1f:.55f);
     }
     void buildUI(){
         if(surface!=null)surface.dispose();
@@ -81,44 +106,47 @@ public final class ReaderActivity extends Activity {
         root.addView(surface,new FrameLayout.LayoutParams(-1,-1));
         top=new LinearLayout(this);top.setGravity(Gravity.CENTER_VERTICAL);
         top.setPadding(dp(3),dp(2),dp(6),dp(2));top.setBackground(bg());
-        FrameLayout.LayoutParams topParams=new FrameLayout.LayoutParams(-1,dp(44),Gravity.TOP);
+        FrameLayout.LayoutParams topParams=new FrameLayout.LayoutParams(-1,dp(38),Gravity.TOP);
         root.addView(top,topParams);
-        TextView back=text("‹ My Comics",tablet()?14:12);
-        top.addView(back,new LinearLayout.LayoutParams(dp(tablet()?116:96),-1));
+        TextView back=text("‹  My Comics",tablet()?14:12);
+        top.addView(back,new LinearLayout.LayoutParams(dp(115),-1));
         back.setOnClickListener(v->finish());
         title=text(book.optString("title"),tablet()?14:11);
         title.setSingleLine(true);
         title.setEllipsize(android.text.TextUtils.TruncateAt.END);
         top.addView(title,new LinearLayout.LayoutParams(0,-1,1));
-        bookmark=text("☆",24);
-        bookmark.setContentDescription("Bookmark current page");
-        top.addView(bookmark,new LinearLayout.LayoutParams(dp(42),-1));
+        title.setGravity(Gravity.CENTER_VERTICAL|Gravity.RIGHT);
+        bookmark=originalIcon("assets/ipa_original/bookmark@2x.png","Bookmark current page",40,35);
+        top.addView(bookmark,new LinearLayout.LayoutParams(dp(40),-1));
         bookmark.setOnClickListener(v->toggleBookmark());
         bookmark.setOnLongClickListener(v->{jumpToBookmark();return true;});
         if(tablet()&&landscape()){
-            TextView mode=text(doublePage?"2 Pages":"1 Page",12);
-            mode.setBackground(bg());
-            top.addView(mode,new LinearLayout.LayoutParams(dp(78),dp(36)));
-            mode.setOnClickListener(v->{
-                doublePage=!doublePage;
-                ComicStore.prefs(this).edit().putBoolean("two-page",doublePage).apply();
-                mode.setText(doublePage?"2 Pages":"1 Page");
-                if(doublePage && page>0)page=1+((page-1)/2)*2;
-                showPage();
-            });
+            LinearLayout mode=new LinearLayout(this);
+            mode.setGravity(Gravity.CENTER);
+            mode.setOrientation(LinearLayout.HORIZONTAL);
+            singlePageIcon=originalIcon("assets/ipa_original/single_page_spread_white@2x.png","Single page",78,30);
+            twoPageIcon=originalIcon("assets/ipa_original/two_page_spread_white@2x.png","Two pages",78,30);
+            mode.addView(singlePageIcon,new LinearLayout.LayoutParams(0,dp(31),1));
+            mode.addView(twoPageIcon,new LinearLayout.LayoutParams(0,dp(31),1));
+            top.addView(mode,new LinearLayout.LayoutParams(dp(156),-1));
+            singlePageIcon.setOnClickListener(v->selectSpread(false));
+            twoPageIcon.setOnClickListener(v->selectSpread(true));
+            updateModeIcons();
+        }else{
+            singlePageIcon=null;twoPageIcon=null;
         }
         bottom=new LinearLayout(this);
         bottom.setGravity(Gravity.CENTER_VERTICAL);
         bottom.setBackground(bg());bottom.setPadding(dp(4),0,dp(8),0);
-        root.addView(bottom,new FrameLayout.LayoutParams(-1,dp(52),Gravity.BOTTOM));
-        TextView previous=text("‹",30);
-        bottom.addView(previous,new LinearLayout.LayoutParams(dp(36),-1));
-        previous.setOnClickListener(v->previous());
-        counter=text("1 / "+pages.length(),12);
-        bottom.addView(counter,new LinearLayout.LayoutParams(dp(tablet()?116:83),-1));
+        root.addView(bottom,new FrameLayout.LayoutParams(-1,dp(48),Gravity.BOTTOM));
+        counter=text("1 / "+pages.length(),13);
+        counter.setTypeface(Typeface.create("monospace",Typeface.BOLD));
+        bottom.addView(counter,new LinearLayout.LayoutParams(dp(104),-1));
         scrubber=new SeekBar(this);
         scrubber.setMax(Math.max(0,pages.length()-1));
         scrubber.setContentDescription("Comic page slider");
+        scrubber.setProgressTintList(android.content.res.ColorStateList.valueOf(Color.rgb(247,211,115)));
+        scrubber.setThumbTintList(android.content.res.ColorStateList.valueOf(Color.rgb(247,211,115)));
         bottom.addView(scrubber,new LinearLayout.LayoutParams(0,-1,1));
         scrubber.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
             @Override public void onStartTrackingTouch(SeekBar v){}
@@ -127,11 +155,16 @@ public final class ReaderActivity extends Activity {
             }
             @Override public void onStopTrackingTouch(SeekBar v){}
         });
-        TextView next=text("›",30);
-        bottom.addView(next,new LinearLayout.LayoutParams(dp(36),-1));
-        next.setOnClickListener(v->next());
         top.setVisibility(barsVisible?View.VISIBLE:View.GONE);
         bottom.setVisibility(barsVisible?View.VISIBLE:View.GONE);
+    }
+    void selectSpread(boolean requested){
+        if(doublePage==requested)return;
+        doublePage=requested;
+        ComicStore.prefs(this).edit().putBoolean("two-page",doublePage).apply();
+        updateModeIcons();
+        if(doublePage && page>0)page=1+((page-1)/2)*2;
+        showPage();
     }
     void toggleBars(){
         barsVisible=!barsVisible;
@@ -150,26 +183,34 @@ public final class ReaderActivity extends Activity {
         changing=true;scrubber.setProgress(page);changing=false;
         ComicStore.prefs(this).edit().putInt("progress-"+id,page).putString("last",id).apply();
         int saved=ComicStore.prefs(this).getInt("bookmark-"+id,-1);
-        bookmark.setText(saved==page?"★":"☆");
+        bookmark.setAlpha(saved==page?1f:.55f);
+        bookmark.setContentDescription(saved==page?"Remove page bookmark":"Bookmark current page");
     }
     void next(){
-        if(surface.scale>1.01f)return;
+        if(turning||surface.scale>1.01f)return;
         int delta=spread()?2:1;
         int target=page+delta;
         if(target>=pages.length()){bookEnd();return;}
         flipTo(target);
     }
     void previous(){
-        if(surface.scale>1.01f||page==0)return;
+        if(turning||surface.scale>1.01f||page==0)return;
         int delta=spread()&&page>1?2:1;
         flipTo(Math.max(0,page-delta));
     }
     void flipTo(int target){
-        if(surface==null)return;
-        surface.animate().alpha(.32f).setDuration(100).withEndAction(()->{
-            page=target;showPage();
-            surface.animate().alpha(1f).setDuration(120).start();
-        }).start();
+        if(surface==null || turning)return;
+        turning=true;
+        // Subtle directional page transition, matching iVerse timing more
+        // closely than the old full-screen flash/fade.
+        final float direction=target>page?-1f:1f;
+        surface.animate().translationX(dp(14)*direction).alpha(.80f)
+          .setDuration(135).withEndAction(()->{
+             page=target;showPage();
+             surface.setTranslationX(dp(14)*(-direction));
+             surface.animate().translationX(0).alpha(1f).setDuration(165)
+               .withEndAction(()->turning=false).start();
+          }).start();
     }
     void toggleBookmark(){
         int saved=ComicStore.prefs(this).getInt("bookmark-"+id,-1);
@@ -216,17 +257,20 @@ public final class ReaderActivity extends Activity {
     }
     @Override protected void onDestroy(){
         if(surface!=null)surface.dispose();
+        imageWorker.shutdownNow();
         super.onDestroy();
     }
 
     private final class ComicCanvas extends View {
         private final Paint paint=new Paint(Paint.ANTI_ALIAS_FLAG|Paint.FILTER_BITMAP_FLAG);
         private Bitmap first,second;
+        private int imageGeneration=0;
         private final ScaleGestureDetector scaleDetector;
         private final GestureDetector gestures;
         float scale=1f,offsetX=0,offsetY=0;
         ComicCanvas(){
-            super(ReaderActivity.this);setLayerType(View.LAYER_TYPE_SOFTWARE,null);
+            super(ReaderActivity.this);
+            // Keep the iOS-style pan/zoom responsive via hardware-accelerated Canvas.
             scaleDetector=new ScaleGestureDetector(ReaderActivity.this,new ScaleGestureDetector.SimpleOnScaleGestureListener(){
                 @Override public boolean onScale(ScaleGestureDetector d){
                     scale=Math.min(4f,Math.max(1f,scale*d.getScaleFactor()));
@@ -259,13 +303,28 @@ public final class ReaderActivity extends Activity {
             });
         }
         void load(String left,String right){
-            dispose();
-            first=ComicStore.bitmap(ReaderActivity.this,left,right==null?2600:1800);
-            if(right!=null)second=ComicStore.bitmap(ReaderActivity.this,right,1800);
+            final int generation=++imageGeneration;
             scale=1;offsetX=0;offsetY=0;
-            invalidate();
+            // Decode full page images off the UI thread to avoid visible
+            // freezes while turning pages or dragging the scrubber.
+            imageWorker.submit(()->{
+                Bitmap incoming=ComicStore.bitmap(ReaderActivity.this,left,right==null?2600:1800);
+                Bitmap companion=right!=null?ComicStore.bitmap(ReaderActivity.this,right,1800):null;
+                ui.post(()->{
+                    if(isFinishing() || isDestroyed() || generation!=imageGeneration){
+                        if(incoming!=null)incoming.recycle();
+                        if(companion!=null)companion.recycle();
+                        return;
+                    }
+                    Bitmap oldFirst=first,oldSecond=second;
+                    first=incoming;second=companion;invalidate();
+                    if(oldFirst!=null && oldFirst!=first)oldFirst.recycle();
+                    if(oldSecond!=null && oldSecond!=second)oldSecond.recycle();
+                });
+            });
         }
         void dispose(){
+            imageGeneration++;
             if(first!=null){first.recycle();first=null;}
             if(second!=null){second.recycle();second=null;}
         }
