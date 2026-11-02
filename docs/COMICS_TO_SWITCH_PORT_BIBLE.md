@@ -53,7 +53,7 @@ Everything in the right column is **a proposed research question**, not an asser
 
 ## 4. Data and proof contract — mandatory before coding
 
-For each new comic-derived action or art object, create a small `proposal.json` conforming to `switch-port/content/comics/proposal.schema.json`. Minimum fields:
+For each new comic-derived action or art object, create a small `proposal.json` conforming to the [published proposal schema](comic-proposal.schema.json) (also mirrored at `switch-port/content/comics/proposal.schema.json` on Forge01). Minimum fields:
 
 - `content_id` (e.g. `COM-03-SQUIDBALL-01`), `arc_id`, `print_issue` in 1–25, `webtoon_chapters` and `page_refs` (1-based page positions in the **correct source edition**).
 - `story_beat`, `characters`, `props`, `location`, `continuity_before`, `continuity_after` — supported by page observations, not intuition.
