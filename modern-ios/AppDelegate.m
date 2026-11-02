@@ -505,7 +505,6 @@ static void PGDrawImageFitted(UIImage *image,CGRect slot){
 @property(nonatomic,strong) NSArray *issues;
 @property(nonatomic,strong) UICollectionView *collection;
 @property(nonatomic,strong) PGShelfBackdrop *backdrop;
-@property(nonatomic,strong) UIImageView *banner;
 @property(nonatomic,strong) UIView *header;
 @property(nonatomic,strong) UIView *tabs;
 @property(nonatomic,strong) UILabel *headerLabel;
@@ -531,11 +530,7 @@ static void PGDrawImageFitted(UIImage *image,CGRect slot){
 - (void)viewDidLoad {
  [super viewDidLoad];self.issues=PGLibrary();self.customIssues=PGImportedLibrary();self.visibleIssues=self.issues;self.customMode=NO;
  self.view.backgroundColor=[UIColor colorWithRed:.18 green:.65 blue:.73 alpha:1];
- // The original iVerse iPad banner and drawer images are embedded in the recovered IPA.
- self.banner=[self art:@"assets/ipa_original/shelfBlueiPad@2x.png" mode:UIViewContentModeScaleToFill];
- [self.view addSubview:self.banner];
- UIImageView *logo=[self art:@"assets/ipa_original/native_header_logo.png" mode:UIViewContentModeScaleAspectFit];
- [self.banner addSubview:logo];
+ // Full-height native bookshelf: start directly with My Comics, without the Pocket God masthead.
  self.header=[UIView new];self.header.translatesAutoresizingMaskIntoConstraints=NO;
  UIImageView *leaf=[self art:@"assets/ipa_original/drawer_bg@2x.png" mode:UIViewContentModeScaleToFill];
  [self.header addSubview:leaf];
@@ -639,12 +634,7 @@ static void PGDrawImageFitted(UIImage *image,CGRect slot){
  [self.tabs addSubview:self.comicsButton];[self.tabs addSubview:self.customButton];
  [self.view addSubview:self.tabs];
  [NSLayoutConstraint activateConstraints:@[
-  [self.banner.topAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.topAnchor],
-  [self.banner.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor],[self.banner.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor],
-  [self.banner.heightAnchor constraintEqualToConstant:UI_USER_INTERFACE_IDIOM()==UIUserInterfaceIdiomPad?112:95],
-  [logo.centerXAnchor constraintEqualToAnchor:self.banner.centerXAnchor],[logo.centerYAnchor constraintEqualToAnchor:self.banner.centerYAnchor],
-  [logo.widthAnchor constraintEqualToConstant:320],[logo.heightAnchor constraintEqualToAnchor:self.banner.heightAnchor],
-  [self.header.topAnchor constraintEqualToAnchor:self.banner.bottomAnchor],
+  [self.header.topAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.topAnchor],
   [self.header.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor],[self.header.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor],
   [self.header.heightAnchor constraintEqualToConstant:47],
   [leaf.topAnchor constraintEqualToAnchor:self.header.topAnchor],[leaf.bottomAnchor constraintEqualToAnchor:self.header.bottomAnchor],
@@ -908,6 +898,7 @@ static void PGDrawImageFitted(UIImage *image,CGRect slot){
  PGPageController *reader=[[PGPageController alloc]initWithIssue:self.visibleIssues[index.item]];
  reader.modalPresentationStyle=UIModalPresentationFullScreen;[self presentViewController:reader animated:YES completion:nil];
 }
+- (BOOL)prefersStatusBarHidden { return YES; }
 @end
 @implementation AppDelegate
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)opts{
