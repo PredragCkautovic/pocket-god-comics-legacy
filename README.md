@@ -12,8 +12,10 @@ The release includes exactly two downloads:
 
 | Platform | File | Notes |
 | --- | --- | --- |
-| iPhone and iPad | `Pocket God Comics.ipa` | Native 64-bit iOS build, iOS 12 or newer |
-| Android | `Pocket God Comics.apk` | Native Android build, Android 6.0 or newer |
+| iPhone and iPad | [Pocket God Comics.ipa](https://github.com/PredragCkautovic/pocket-god-comics-legacy/releases/download/modern-v3.0.0/Pocket.God.Comics.ipa) | Native 64-bit iOS build, iOS 12 or newer |
+| Android | [Pocket God Comics.apk](https://github.com/PredragCkautovic/pocket-god-comics-legacy/releases/download/modern-v3.0.0/Pocket.God.Comics.apk) | Native Android build, Android 6.0 or newer |
+
+GitHub replaces spaces in attached release filenames with dots, so the downloads appear as `Pocket.God.Comics.ipa` and `Pocket.God.Comics.apk`. They're the same tested builds.
 
 Both editions contain **25 comics and 654 pages** for reading offline.
 
