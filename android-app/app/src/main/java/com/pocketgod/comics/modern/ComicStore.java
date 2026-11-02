@@ -5,6 +5,7 @@ import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
+import android.util.LruCache;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -27,6 +28,17 @@ import java.util.zip.ZipInputStream;
 
 final class ComicStore {
     private ComicStore() {}
+    // UIKit-style resource reuse: shelves use only two repeating original images;
+    // sharing decoded bitmaps avoids allocating a new large texture for each row.
+    private static final LruCache<String,Bitmap> artworkCache =
+        new LruCache<String,Bitmap>(48*1024*1024) {
+            @Override protected int sizeOf(String key,Bitmap image){return image.getByteCount();}
+        };
+    private static boolean canCache(String path){
+        return path.startsWith("assets/ipa_original/")
+            || path.startsWith("assets/native_thumbs/")
+            || (path.startsWith("custom/") && path.endsWith("/0000.jpg"));
+    }
     static SharedPreferences prefs(Context ctx) {
         return ctx.getSharedPreferences("comics", Context.MODE_PRIVATE);
     }
@@ -75,6 +87,12 @@ final class ComicStore {
     }
     static Bitmap bitmap(Context ctx,String path,int maxDimension) {
         if(path==null || path.isEmpty())return null;
+        boolean cache=canCache(path);
+        String key=path+"@"+maxDimension;
+        if(cache){
+            Bitmap existing=artworkCache.get(key);
+            if(existing!=null && !existing.isRecycled())return existing;
+        }
         try {
             BitmapFactory.Options bounds=new BitmapFactory.Options();
             bounds.inJustDecodeBounds=true;
@@ -90,7 +108,9 @@ final class ComicStore {
             decode.inSampleSize=sample;
             decode.inPreferredConfig=Bitmap.Config.ARGB_8888;
             try(InputStream stream=openImage(ctx,path)) {
-                return BitmapFactory.decodeStream(stream,null,decode);
+                Bitmap result=BitmapFactory.decodeStream(stream,null,decode);
+                if(cache && result!=null)artworkCache.put(key,result);
+                return result;
             }
         }catch(Exception ex){return null;}
     }
