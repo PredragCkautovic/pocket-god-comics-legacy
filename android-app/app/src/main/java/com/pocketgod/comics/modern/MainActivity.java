@@ -52,6 +52,17 @@ public final class MainActivity extends Activity {
     void fullscreen(){
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,WindowManager.LayoutParams.FLAG_FULLSCREEN);
         getWindow().setNavigationBarColor(Color.rgb(5,24,31));
+        applyImmersive();
+    }
+    void applyImmersive(){
+        getWindow().getDecorView().setSystemUiVisibility(
+            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+            | View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+            | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
+    }
+    @Override public void onWindowFocusChanged(boolean hasFocus){
+        super.onWindowFocusChanged(hasFocus);
+        if(hasFocus)applyImmersive();
     }
     @Override public void onCreate(Bundle b){
         super.onCreate(b);fullscreen();
@@ -97,16 +108,7 @@ public final class MainActivity extends Activity {
         root=outer;
         setContentView(outer);
 
-        FrameLayout masthead=new FrameLayout(this);
-        masthead.setBackgroundColor(Color.rgb(46,150,166));
-        backgroundFromAsset(masthead,"assets/ipa_original/shelfBlueiPad@2x.png");
-        outer.addView(masthead,new LinearLayout.LayoutParams(-1,dp(tablet()?112:95)));
-        ImageView logo=new ImageView(this);
-        logo.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        logo.setImageBitmap(ComicStore.bitmap(this,"assets/ipa_original/native_header_logo.png",720));
-        FrameLayout.LayoutParams lp=new FrameLayout.LayoutParams(dp(320),-1,Gravity.CENTER);
-        masthead.addView(logo,lp);
-
+        // Match the new iOS fullscreen library: My Comics begins at the very top.
         heading=label(custom?"Custom Comics":"My Comics",21,Color.WHITE,true);
         heading.setShadowLayer(dp(2),0,dp(2),Color.BLACK);
         backgroundFromAsset(heading,"assets/ipa_original/drawer_bg@2x.png");
@@ -263,7 +265,7 @@ public final class MainActivity extends Activity {
         int coverW=Math.max(55,Math.min(215,Math.min(Math.round(cellWidth*.73f),Math.round(coverH*.68f))));
         ImageView cover=new ImageView(this);
         cover.setScaleType(ImageView.ScaleType.FIT_XY);
-        cover.setImageBitmap(ComicStore.bitmap(this,issue.optString("thumbnail",issue.optString("cover")),600));
+        cover.setImageBitmap(ComicStore.coverBitmap(this,issue,600));
         GradientDrawable edge=new GradientDrawable();
         edge.setColor(Color.rgb(13,59,82));edge.setStroke(dp(4),Color.rgb(8,56,88));
         cover.setBackground(edge);
@@ -287,7 +289,7 @@ public final class MainActivity extends Activity {
         container.setBackgroundColor(Color.rgb(17,71,89));
         ImageView cover=new ImageView(this);
         cover.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        cover.setImageBitmap(ComicStore.bitmap(this,issue.optString("thumbnail"),320));
+        cover.setImageBitmap(ComicStore.coverBitmap(this,issue,320));
         container.addView(cover,new LinearLayout.LayoutParams(dp(57),dp(74)));
         TextView title=label(issue.optString("title"),15,Color.WHITE,true);
         title.setGravity(Gravity.CENTER_VERTICAL|Gravity.START);
