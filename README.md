@@ -29,7 +29,7 @@ Both editions contain **25 comics and 654 pages** for reading offline.
 
 ## Features
 
-- The classic **My Comics** bookshelf, with original-style graphics and cover art.
+- The classic **My Comics** bookshelf, with original-style graphics, original app icon, and cover art.
 - Fullscreen comic reading, page navigation, pinch-to-zoom, and saved reading progress.
 - Shelf and list views, with comic search.
 - Bookmarks and a **Continue Reading** option.
