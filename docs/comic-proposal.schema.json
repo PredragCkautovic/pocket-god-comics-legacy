@@ -1,0 +1,255 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/PredragCkautovic/pocket-god-comics-legacy/blob/main/docs/comic-proposal.schema.json",
+  "title": "Pocket God Definitive comic-derived feature proposal",
+  "description": "Planning contract only. Content must be page-verified, rights-cleared, isolated from Classic gameplay.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "content_id",
+    "arc_id",
+    "print_issue",
+    "webtoon_chapters",
+    "page_refs",
+    "story_beat",
+    "characters",
+    "props",
+    "location",
+    "continuity_before",
+    "continuity_after",
+    "player_action",
+    "preconditions",
+    "event_states",
+    "animation_cues",
+    "audio_cues",
+    "outcomes",
+    "replay_reset",
+    "evidence",
+    "game_ipa_overlap",
+    "asset_rights",
+    "source_confidence",
+    "implementation_status",
+    "switch_qa"
+  ],
+  "properties": {
+    "content_id": {
+      "type": "string",
+      "pattern": "^COM-0[1-9]-[A-Z0-9_-]+$",
+      "maxLength": 80
+    },
+    "arc_id": {
+      "enum": [
+        "COM-01",
+        "COM-02",
+        "COM-03",
+        "COM-04",
+        "COM-05",
+        "COM-06",
+        "COM-07",
+        "COM-08",
+        "COM-09"
+      ]
+    },
+    "print_issue": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 25
+    },
+    "webtoon_chapters": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 63
+      },
+      "uniqueItems": true,
+      "minItems": 1
+    },
+    "page_refs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "source_edition",
+          "issue_or_chapter",
+          "page_1_based",
+          "private_evidence_id"
+        ],
+        "properties": {
+          "source_edition": {
+            "enum": [
+              "print25-reconstruction",
+              "webtoon63"
+            ]
+          },
+          "issue_or_chapter": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 63
+          },
+          "page_1_based": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "private_evidence_id": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "minItems": 1
+    },
+    "story_beat": {
+      "type": "string",
+      "minLength": 8
+    },
+    "characters": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "props": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "location": {
+      "type": "string"
+    },
+    "continuity_before": {
+      "type": "string"
+    },
+    "continuity_after": {
+      "type": "string"
+    },
+    "player_action": {
+      "enum": [
+        "unknown",
+        "tap",
+        "drag",
+        "swipe",
+        "hold",
+        "multi-touch",
+        "scripted-only"
+      ]
+    },
+    "preconditions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "event_states": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "animation_cues": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "audio_cues": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "outcomes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "replay_reset": {
+      "type": "string"
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "private_ref",
+          "sha256",
+          "assessment"
+        ],
+        "properties": {
+          "private_ref": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sha256": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-fA-F0-9]{64}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "assessment": {
+            "type": "string",
+            "minLength": 5
+          }
+        }
+      },
+      "minItems": 1
+    },
+    "game_ipa_overlap": {
+      "enum": [
+        "unknown",
+        "original",
+        "comic_only"
+      ]
+    },
+    "original_ios_version": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "asset_rights": {
+      "enum": [
+        "unknown",
+        "authorized_private",
+        "authorized_public",
+        "newly_created_authorized",
+        "not_cleared"
+      ]
+    },
+    "source_confidence": {
+      "enum": [
+        "unreviewed",
+        "panel_verified",
+        "device_verified"
+      ]
+    },
+    "implementation_status": {
+      "enum": [
+        "research",
+        "prototype",
+        "qa",
+        "accepted",
+        "rejected"
+      ]
+    },
+    "switch_qa": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}
