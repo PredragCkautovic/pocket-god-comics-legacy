@@ -1,0 +1,48 @@
+name: Modern Pocket God Comics 3.0 ARM64 Test IPA
+
+'on':
+  push:
+    branches:
+      - modern-3.0.0-rc1-ci
+    paths:
+      - "modern-ios/**"
+      - ".github/workflows/modern-native-3.0.0.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-modern-ios:
+    name: Assemble native ARM64 IPA from authorized legacy archive
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - name: Checkout build sources
+        uses: actions/checkout@v4
+
+      - name: Python runtime
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install offline asset pipeline dependency
+        run: python3 -m pip install Pillow
+
+      - name: Check Xcode and SDK
+        run: |
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-path
+
+      - name: Assemble and compile modern ARM64 app
+        run: python3 modern-ios/build-ci.py
+
+      - name: Upload user-test IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: Pocket_God_Comics_Modern_3.0.0_RC1_TEST
+          path: |
+            modern-ios/build/Pocket_God_Comics_Modern_3.0.0_RC1_TEST.ipa
+            modern-ios/build/QA.json
+          retention-days: 30
+          if-no-files-found: error
