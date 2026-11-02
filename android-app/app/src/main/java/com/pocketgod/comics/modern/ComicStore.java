@@ -85,6 +85,16 @@ final class ComicStore {
         if(path.startsWith("/") || path.contains(".."))throw new IOException("Invalid asset path");
         return ctx.getAssets().open("web/"+path);
     }
+    // The native catalog contains an optimized thumbnail path and a canonical cover.
+    // Fall back to the full cover if an older APK omitted the thumbnail asset.
+    static Bitmap coverBitmap(Context ctx,JSONObject book,int maxDimension){
+        String thumb=book.optString("thumbnail","");
+        String cover=book.optString("cover","");
+        Bitmap image=thumb.length()>0?bitmap(ctx,thumb,maxDimension):null;
+        if(image==null && cover.length()>0 && !cover.equals(thumb))
+            image=bitmap(ctx,cover,maxDimension);
+        return image;
+    }
     static Bitmap bitmap(Context ctx,String path,int maxDimension) {
         if(path==null || path.isEmpty())return null;
         boolean cache=canCache(path);
