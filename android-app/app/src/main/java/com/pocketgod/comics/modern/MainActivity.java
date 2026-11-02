@@ -100,33 +100,42 @@ public final class MainActivity extends Activity {
         FrameLayout masthead=new FrameLayout(this);
         masthead.setBackgroundColor(Color.rgb(46,150,166));
         backgroundFromAsset(masthead,"assets/ipa_original/shelfBlueiPad@2x.png");
-        outer.addView(masthead,new LinearLayout.LayoutParams(-1,dp(tablet()?110:85)));
+        outer.addView(masthead,new LinearLayout.LayoutParams(-1,dp(tablet()?112:95)));
         ImageView logo=new ImageView(this);
         logo.setScaleType(ImageView.ScaleType.FIT_CENTER);
         logo.setImageBitmap(ComicStore.bitmap(this,"assets/ipa_original/native_header_logo.png",720));
-        FrameLayout.LayoutParams lp=new FrameLayout.LayoutParams(dp(tablet()?325:265),-1,Gravity.CENTER);
+        FrameLayout.LayoutParams lp=new FrameLayout.LayoutParams(dp(320),-1,Gravity.CENTER);
         masthead.addView(logo,lp);
 
-        heading=label(custom?"Custom Comics":"My Comics",tablet()?22:19,Color.WHITE,true);
+        heading=label(custom?"Custom Comics":"My Comics",21,Color.WHITE,true);
         heading.setShadowLayer(dp(2),0,dp(2),Color.BLACK);
         backgroundFromAsset(heading,"assets/ipa_original/drawer_bg@2x.png");
-        outer.addView(heading,new LinearLayout.LayoutParams(-1,dp(tablet()?44:39)));
+        outer.addView(heading,new LinearLayout.LayoutParams(-1,dp(47)));
 
         LinearLayout toolbar=new LinearLayout(this);
         toolbar.setOrientation(LinearLayout.HORIZONTAL);
         toolbar.setGravity(Gravity.CENTER_VERTICAL);
         toolbar.setPadding(dp(6),dp(3),dp(6),dp(3));
         toolbar.setBackgroundColor(Color.rgb(11,58,72));
-        outer.addView(toolbar,new LinearLayout.LayoutParams(-1,dp(48)));
-        TextView toggle=label(list?"List":"Shelf",13,Color.WHITE,true);
-        toggle.setBackground(panel(Color.rgb(29,105,132),5));
-        toolbar.addView(toggle,new LinearLayout.LayoutParams(dp(66),dp(37)));
-        toggle.setOnClickListener(v->{list=!list;ComicStore.prefs(this).edit().putBoolean("list-mode",list).apply();toggle.setText(list?"List":"Shelf");populate();});
+        backgroundFromAsset(toolbar,"assets/ipa_original/drawer_bg@2x.png");
+        outer.addView(toolbar,new LinearLayout.LayoutParams(-1,dp(43)));
+        // Match the original iVerse two-icon UIKit segmented control.
+        LinearLayout toggle=new LinearLayout(this);
+        toggle.setOrientation(LinearLayout.HORIZONTAL);
+        toggle.setGravity(Gravity.CENTER);
+        toolbar.addView(toggle,new LinearLayout.LayoutParams(dp(tablet()?124:88),dp(32)));
+        ImageView shelfIcon=assetIcon("assets/ipa_original/shelf_icon@2x.png","Shelf view",24);
+        ImageView listIcon=assetIcon("assets/ipa_original/list_icon@2x.png","List view",24);
+        toggle.addView(shelfIcon,new LinearLayout.LayoutParams(0,-1,1));
+        toggle.addView(listIcon,new LinearLayout.LayoutParams(0,-1,1));
+        shelfIcon.setOnClickListener(v->{if(list){list=false;ComicStore.prefs(this).edit().putBoolean("list-mode",false).apply();styleMode(shelfIcon,listIcon);populate();}});
+        listIcon.setOnClickListener(v->{if(!list){list=true;ComicStore.prefs(this).edit().putBoolean("list-mode",true).apply();styleMode(shelfIcon,listIcon);populate();}});
+        styleMode(shelfIcon,listIcon);
 
         EditText filter=new EditText(this);
         filter.setSingleLine(true);filter.setTextSize(14);filter.setTextColor(Color.WHITE);
         filter.setHintTextColor(Color.LTGRAY);filter.setHint("Search comics");
-        filter.setBackground(panel(Color.rgb(21,77,89),5));
+        filter.setBackground(panel(Color.argb(210,22,76,87),4));
         filter.setPadding(dp(10),0,dp(7),0);
         filter.setText(search);
         LinearLayout.LayoutParams filterParams=new LinearLayout.LayoutParams(0,dp(38),1);
@@ -139,15 +148,12 @@ public final class MainActivity extends Activity {
             }
             @Override public void afterTextChanged(Editable e){}
         });
-        TextView add=label("＋",26,Color.WHITE,true);
-        add.setContentDescription("Import CBZ from Files");
-        add.setBackground(panel(Color.rgb(29,105,132),5));
-        toolbar.addView(add,new LinearLayout.LayoutParams(dp(39),dp(37)));
+        ImageView add=assetIcon("assets/ipa_original/downloads.png","Import CBZ from Files",29);
+        toolbar.addView(add,new LinearLayout.LayoutParams(dp(36),dp(36)));
         add.setOnClickListener(v->openPicker());
 
-        TextView settings=label("⚙",23,Color.WHITE,false);
-        settings.setContentDescription("Reader settings");
-        toolbar.addView(settings,new LinearLayout.LayoutParams(dp(40),dp(37)));
+        ImageView settings=assetIcon("assets/ipa_original/settings@2x.png","Reader settings",29);
+        toolbar.addView(settings,new LinearLayout.LayoutParams(dp(36),dp(36)));
         settings.setOnClickListener(v->showSettings());
 
         scroll=new ScrollView(this);
@@ -170,9 +176,9 @@ public final class MainActivity extends Activity {
         bottom.setGravity(Gravity.CENTER);
         bottom.setPadding(dp(7),dp(5),dp(7),dp(5));
         backgroundFromAsset(bottom,"assets/ipa_original/drawer_bg@2x.png");
-        outer.addView(bottom,new LinearLayout.LayoutParams(-1,dp(tablet()?63:58)));
-        TextView original=tab("My Comics",!custom);
-        TextView imported=tab("Custom",custom);
+        outer.addView(bottom,new LinearLayout.LayoutParams(-1,dp(58)));
+        View original=tab("My Comics","assets/ipa_original/my_comics@2x.png",!custom);
+        View imported=tab("Custom","assets/ipa_original/list_icon@2x.png",custom);
         LinearLayout.LayoutParams weight=new LinearLayout.LayoutParams(0,-1,1);
         weight.setMargins(dp(3),0,dp(3),0);
         bottom.addView(original,weight);
@@ -181,11 +187,33 @@ public final class MainActivity extends Activity {
         original.setOnClickListener(v->{custom=false;search="";buildShell();});
         populate();
     }
-    TextView tab(String name,boolean selected){
-        TextView b=label(name,15,Color.WHITE,true);
-        if(selected)backgroundFromAsset(b,"assets/ipa_original/blue_button.png");
-        else b.setBackground(panel(Color.argb(130,15,54,67),5));
-        return b;
+    ImageView assetIcon(String path,String accessible,int iconDp){
+        ImageView icon=new ImageView(this);
+        icon.setImageBitmap(ComicStore.bitmap(this,path,256));
+        icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        icon.setPadding(dp(3),dp(3),dp(3),dp(3));
+        icon.setContentDescription(accessible);
+        return icon;
+    }
+    void styleMode(ImageView shelfIcon,ImageView listIcon){
+        backgroundFromAsset(list?shelfIcon:listIcon,"assets/ipa_original/drawer_bg@2x.png");
+        backgroundFromAsset(list?listIcon:shelfIcon,"assets/ipa_original/blue_button.png");
+        shelfIcon.setAlpha(list?.75f:1f);
+        listIcon.setAlpha(list?1f:.75f);
+    }
+    View tab(String name,String iconPath,boolean selected){
+        LinearLayout tab=new LinearLayout(this);
+        tab.setOrientation(LinearLayout.VERTICAL);
+        tab.setGravity(Gravity.CENTER);
+        if(selected)backgroundFromAsset(tab,"assets/ipa_original/blue_button.png");
+        else tab.setBackground(panel(Color.argb(130,15,54,67),5));
+        ImageView symbol=assetIcon(iconPath,name,27);
+        tab.addView(symbol,new LinearLayout.LayoutParams(dp(27),dp(27)));
+        TextView caption=label(name,12,Color.WHITE,true);
+        caption.setShadowLayer(dp(1),0,dp(1),Color.BLACK);
+        tab.addView(caption,new LinearLayout.LayoutParams(-1,dp(16)));
+        tab.setContentDescription(name+" tab");
+        return tab;
     }
     void populate(){
         if(shelf==null)return;
@@ -203,7 +231,7 @@ public final class MainActivity extends Activity {
                 for(JSONObject item:books)shelf.addView(listRow(item));
             }else{
                 int cols=tablet()?(landscape()?4:2):2;
-                int rowHeight=tablet()?(landscape()?300:340):205;
+                int rowHeight=tablet()?(landscape()?315:355):206;
                 String layout=tablet()?(landscape()?"ipad_landscape":"ipad_portrait"):"phone";
                 for(int start=0,row=0;start<books.size();start+=cols,row++){
                     FrameLayout section=new FrameLayout(this);
@@ -228,19 +256,26 @@ public final class MainActivity extends Activity {
         LinearLayout container=new LinearLayout(this);
         container.setOrientation(LinearLayout.VERTICAL);
         container.setGravity(Gravity.TOP|Gravity.CENTER_HORIZONTAL);
-        container.setPadding(dp(5),dp(8),dp(5),0);
+        container.setPadding(dp(5),dp(13),dp(5),0);
+        // These dimensions mirror PGCoverCell's height .755 and width .68 constraints.
+        int cellWidth=getResources().getConfiguration().screenWidthDp/(tablet()?(landscape()?4:2):2);
+        int coverH=Math.round(rowHeight*.755f);
+        int coverW=Math.max(55,Math.min(215,Math.min(Math.round(cellWidth*.73f),Math.round(coverH*.68f))));
         ImageView cover=new ImageView(this);
-        cover.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        cover.setScaleType(ImageView.ScaleType.FIT_XY);
         cover.setImageBitmap(ComicStore.bitmap(this,issue.optString("thumbnail",issue.optString("cover")),600));
-        GradientDrawable edge=panel(Color.argb(180,5,54,78),4);
+        GradientDrawable edge=new GradientDrawable();
+        edge.setColor(Color.rgb(13,59,82));edge.setStroke(dp(4),Color.rgb(8,56,88));
         cover.setBackground(edge);
-        cover.setPadding(dp(3),dp(3),dp(3),dp(3));
-        container.addView(cover,new LinearLayout.LayoutParams(-1,dp(rowHeight-56)));
-        TextView title=label(issue.optString("title"),tablet()?12:10,Color.WHITE,true);
+        cover.setPadding(dp(4),dp(4),dp(4),dp(4));
+        container.addView(cover,new LinearLayout.LayoutParams(dp(coverW),dp(coverH)));
+        TextView title=label(issue.optString("title"),tablet()?13:10,Color.WHITE,true);
         title.setShadowLayer(dp(2),0,dp(2),Color.BLACK);
         title.setMaxLines(2);
         title.setEllipsize(android.text.TextUtils.TruncateAt.END);
-        container.addView(title,new LinearLayout.LayoutParams(-1,dp(43)));
+        LinearLayout.LayoutParams titleParams=new LinearLayout.LayoutParams(-1,dp(39));
+        titleParams.topMargin=dp(9);
+        container.addView(title,titleParams);
         container.setOnClickListener(v->openIssue(issue.optString("id")));
         if(custom)container.setOnLongClickListener(v->{confirmDelete(issue);return true;});
         return container;
