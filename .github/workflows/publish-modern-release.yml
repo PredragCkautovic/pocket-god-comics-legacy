@@ -128,9 +128,11 @@ jobs:
           data=json.loads(raw)
           assets=data["assets"]
           names=sorted(item["name"] for item in assets)
-          assert names==["Pocket God Comics.apk","Pocket God Comics.ipa"],names
+          # GitHub Release assets normalize spaces into dots on upload.
+          assert names==["Pocket.God.Comics.apk","Pocket.God.Comics.ipa"],names
+          expected_bytes={"Pocket.God.Comics.apk":187843116,"Pocket.God.Comics.ipa":187124893}
           for item in assets:
-              assert item["state"]=="uploaded" and item["size"]>180_000_000
+              assert item["state"]=="uploaded" and item["size"]==expected_bytes[item["name"]]
               print("PUBLISHED",item["name"],item["size"],item["browser_download_url"])
           print("RELEASE",data["html_url"])
           PY
