@@ -3,11 +3,13 @@
 > **An unofficial preservation and compatibility project for the classic Pocket God Comics reading experience.**  
 > Original iVerse-style reading interface · Offline comic library · iPhone & iPad · Legacy iOS
 
-![Stage](https://img.shields.io/badge/status-device%20QA%20in%20progress-F3B544?style=flat-square)
+![Stage](https://img.shields.io/badge/status-legacy%20v17%20QA%20passed-32866B?style=flat-square)
 ![iOS](https://img.shields.io/badge/target-iOS%207%E2%80%939-2375C9?style=flat-square)
 ![Architecture](https://img.shields.io/badge/CPU-armv7%20%7C%20armv7s-535E70?style=flat-square)
 ![Editions](https://img.shields.io/badge/editions-25%20%7C%2063-32866B?style=flat-square)
 ![Public Source Checks](https://github.com/PredragCkautovic/pocket-god-comics-legacy/actions/workflows/checks.yml/badge.svg)
+
+**v17 Legacy:** Owner reported successful testing on iPhone 4, iPhone 4S and iPad 2 (2026-11-02). See [hardware acceptance](docs/LEGACY_V17_DEVICE_QA.md). Public source/documentation only; bundled IPA remains private pending distribution-rights review.
 
 **The mission:** preserve the look, navigation and page-turning experience of the original iVerse-based Pocket God Comics app on older Apple hardware. This project explores offline comic access while keeping the **real iPhone and iPad reader interfaces**, rather than replacing them with a generic web viewer.
 
@@ -24,7 +26,7 @@
 | Covers | Original print issue covers #1–25, correctly matched to regrouped stories | Original WEBTOON chapter thumbnails #1–25 + custom covers for chapters #26–63 |
 | User interface | Original iVerse iPhone/iPad reader | Original iVerse iPhone/iPad reader |
 | Reading | Offline, for content already packaged locally | Offline, for content already packaged locally |
-| Status | Built; awaiting hardware QA | Built; awaiting hardware QA |
+| Status | **v17 owner-tested PASS on iPhone 4, 4S, iPad 2** | Built; hardware QA pending |
 
 > **Source fidelity update:** The v16 Classic 25 library reconstructs the **stories of 25 original numbered issues** using creator-reposted WEBTOON chapters. **Original iVerse purchased issue-page files have not been recovered yet**, so it is not a verified facsimile of the original issues. The v16 package is a provisional comparison build, not the release-quality source. Complete 63 is a separate WEBTOON chapter chronology. See [original issue source recovery](docs/ORIGINAL_SOURCE_RECOVERY.md), [25-issue map](docs/CANONICAL_PRINT_25_INDEX.md) and [63-chapter index](docs/WEBTOON_63_CHAPTER_INDEX.md).
 
@@ -34,10 +36,10 @@ The v16 universal QA packages include **armv7 and armv7s** code in both the orig
 
 | Device | Target iOS versions | Test status |
 |---|---|---|
-| iPhone 4 | iOS 7–7.1.2 | Pending physical QA |
-| iPhone 4S | iOS 7–9 | Pending physical QA |
+| iPhone 4 | iOS 7–7.1.2 | Owner-reported PASS (v17) |
+| iPhone 4S | iOS 7–9 | Owner-reported PASS (v17) |
 | iPhone 5 / 5c | iOS 7–9 | Pending physical QA |
-| iPad 2 / 3 / 4 | iOS 7–9 | Pending physical QA |
+| iPad 2 / 3 / 4 | iOS 7–9 | **iPad 2: owner-reported PASS (v17)**; iPad 3/4 not tested |
 | iPad mini (1st generation) | iOS 7–9 | Pending physical QA |
 
 Some 64-bit devices running iOS 7–9 can run 32-bit apps, but they have **not** been independently certified by this project. iOS 6 and older, ARMv6, and modern 64-bit-only iOS are not targets of these binaries.
@@ -147,3 +149,7 @@ Issues are organized into [v13 universal hardware QA](https://github.com/Predrag
 The project-specific compatibility code is visible for review; **no explicit open-source reuse license has yet been selected**. Public repository visibility is not a license grant. See [Provenance and rights](docs/PROVENANCE.md).
 
 *Preserve the story. Preserve the reader. Document what actually works.*
+
+## Comic-to-game reference
+
+[Comic narrative and later Switch adaptation bible](docs/COMICS_TO_SWITCH_PORT_BIBLE.md). Source-game authenticity takes precedence over comic expansion ideas.
