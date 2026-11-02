@@ -552,6 +552,10 @@ static void PGDrawImageFitted(UIImage *image,CGRect slot){
  self.modeSelector.translatesAutoresizingMaskIntoConstraints=NO;
  self.listMode=[[NSUserDefaults standardUserDefaults] boolForKey:@"native-list-mode"];
  self.modeSelector.selectedSegmentIndex=self.listMode?1:0;
+ // These are the exact original iVerse shelf/list toggle icons, not replacements.
+ [self.modeSelector setImage:PGImage(@"assets/ipa_original/shelf_icon@2x.png") forSegmentAtIndex:0];
+ [self.modeSelector setImage:PGImage(@"assets/ipa_original/list_icon@2x.png") forSegmentAtIndex:1];
+ self.modeSelector.accessibilityLabel=@"Comic shelf or list view";
  [self.modeSelector addTarget:self action:@selector(changeMode:) forControlEvents:UIControlEventValueChanged];
  [self.toolsBar addSubview:self.modeSelector];
  self.searchBar=[UISearchBar new];self.searchBar.translatesAutoresizingMaskIntoConstraints=NO;
