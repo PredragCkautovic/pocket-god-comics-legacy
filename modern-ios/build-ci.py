@@ -85,6 +85,20 @@ def main():
             if not (originals / name).exists():
                 raise RuntimeError(f"Missing original iVerse graphic: {name}")
 
+        # iVerse stores some PNGs as Apple's non-standard CgBI images.
+        # Normalize with Xcode's original pngcrush before using Pillow or UIKit.
+        converted = 0
+        for png in sorted(originals.glob("*.png")):
+            if b"CgBI" in png.read_bytes()[:64]:
+                temporary = png.with_name(png.stem + "-normalized.png")
+                run("xcrun", "-sdk", "iphoneos", "pngcrush",
+                    "-revert-iphone-optimizations", "-q", png, temporary)
+                if not temporary.is_file():
+                    raise RuntimeError(f"Unable to normalize legacy image: {png.name}")
+                temporary.replace(png)
+                converted += 1
+        print(f"Normalized {converted} iPhone-optimized PNG files", flush=True)
+
         shelf = Image.open(originals / "shelf_bg@2x.png").convert("RGBA")
         if shelf.size[0] < 640 or shelf.size[1] < 736:
             raise ValueError(f"Unexpected original shelf sprite size: {shelf.size}")
