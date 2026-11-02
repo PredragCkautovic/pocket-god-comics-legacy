@@ -64,7 +64,7 @@ jobs:
                   cover=dest/"web"/item["cover"]
                   assert thumb.is_file() and thumb.stat().st_size>1000, item["thumbnail"]
                   assert cover.is_file() and cover.stat().st_size>1000, item["cover"]
-                  assert thumb.read_bytes()[:3]==b"\\xff\\xd8\\xff", "Invalid JPEG thumbnail"
+                  assert thumb.read_bytes()[:3]==bytes((255,216,255)), "Invalid JPEG thumbnail"
               print("Verified 25 distinct bundled cover thumbnails")
               for name in z.namelist():
                   if name.startswith(app+"web/assets/ipa_original/") and not name.endswith("/"):
@@ -123,7 +123,7 @@ jobs:
                   assert "assets/web/"+issue["thumbnail"] in names, "Missing cover thumbnail: "+issue["id"]
                   assert "assets/web/"+issue["cover"] in names, "Missing cover image: "+issue["id"]
                   image=z.read("assets/web/"+issue["thumbnail"])
-                  assert image[:3]==b"\\xff\\xd8\\xff", "Unreadable JPEG thumbnail: "+issue["id"]
+                  assert image[:3]==bytes((255,216,255)), "Unreadable JPEG thumbnail: "+issue["id"]
               print("Verified original 25 cover thumbnails and fallback covers in APK")
               assert "classes.dex" in names
               assert "AndroidManifest.xml" in names
