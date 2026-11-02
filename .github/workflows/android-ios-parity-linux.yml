@@ -1,0 +1,156 @@
+name: Android iOS-Parity Reader APK
+
+'on':
+  push:
+    branches:
+      - modern-3.0.0-rc1-ci
+    paths:
+      - "android-app/**"
+      - ".github/workflows/android-ios-parity-linux.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  android-parity:
+    name: Native Android with verified iVerse source assets
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout Android source
+        uses: actions/checkout@v4
+
+      - name: Download validated iOS asset archive
+        uses: actions/download-artifact@v4
+        with:
+          name: Pocket_God_Comics_Modern_3.0.0_RC1_TEST
+          run-id: 41470739056
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: PredragCkautovic/pocket-god-comics-legacy
+          path: ios-cache
+
+      - name: Extract canonical original comic bundle
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+          import json,hashlib
+          ipa=Path("ios-cache/Pocket_God_Comics_Modern_3.0.0_RC1_TEST.ipa")
+          assert ipa.is_file(), "Missing validated source IPA"
+          app="Payload/PocketGodComics.app/"
+          dest=Path("android-app/app/src/main/assets")
+          dest.mkdir(parents=True,exist_ok=True)
+          with ZipFile(ipa) as z:
+              assert z.testzip() is None
+              catalog=json.loads(z.read(app+"native_catalog.json"))
+              assert len(catalog)==25 and sum(len(i["pages"]) for i in catalog)==654
+              (dest/"native_catalog.json").write_bytes(z.read(app+"native_catalog.json"))
+              images=set()
+              covers=set()
+              for item in catalog:
+                  images.update(item["pages"])
+                  covers.add(item["thumbnail"])
+                  covers.add(item["cover"])
+              for path in images | covers:
+                  filename=app+"web/"+path
+                  data=z.read(filename)
+                  target=dest/"web"/path
+                  target.parent.mkdir(parents=True,exist_ok=True)
+                  target.write_bytes(data)
+              for item in catalog:
+                  thumb=dest/"web"/item["thumbnail"]
+                  cover=dest/"web"/item["cover"]
+                  assert thumb.is_file() and thumb.stat().st_size>1000, item["thumbnail"]
+                  assert cover.is_file() and cover.stat().st_size>1000, item["cover"]
+                  assert thumb.read_bytes()[:3]==bytes((255,216,255)), "Invalid JPEG thumbnail"
+              print("Verified 25 distinct bundled cover thumbnails")
+              for name in z.namelist():
+                  if name.startswith(app+"web/assets/ipa_original/") and not name.endswith("/"):
+                      target=dest/name[len(app):]
+                      target.parent.mkdir(parents=True,exist_ok=True)
+                      target.write_bytes(z.read(name))
+          print("Verified original 25 issues / 654 pages, extracted",len(images),"media files")
+          PY
+
+      - name: Python runtime for source artwork
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Generate Android launcher icon from the original iVerse icon
+        run: |
+          python3 -m pip install Pillow
+          python3 android-app/tools/create_launcher_icons.py android-app/app/src/main/assets/web/assets/ipa_original/icon@2x.png
+
+      - name: Configure Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Configure Android SDK from Linux image
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          MANAGER="$(find "$ANDROID_HOME" -type f -name sdkmanager -print -quit)"
+          if [ -z "$MANAGER" ]; then
+            mkdir -p "$ANDROID_HOME/cmdline-tools"
+            curl -fL --retry 3 -o /tmp/android-commandlinetools.zip "https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip"
+            unzip -q /tmp/android-commandlinetools.zip -d "$ANDROID_HOME/cmdline-tools/"
+            mv "$ANDROID_HOME/cmdline-tools/cmdline-tools" "$ANDROID_HOME/cmdline-tools/latest"
+            MANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          fi
+          "$MANAGER" --version
+          yes | "$MANAGER" --licenses > /dev/null || true
+          "$MANAGER" "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.10.2"
+
+      - name: Compile APK
+        working-directory: android-app
+        run: gradle :app:assembleDebug --no-daemon --stacktrace
+
+      - name: Validate offline Android APK
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+          import hashlib,json
+          apk=Path("android-app/app/build/outputs/apk/debug/app-debug.apk")
+          assert apk.is_file() and apk.stat().st_size>1000000
+          with ZipFile(apk) as z:
+              assert z.testzip() is None
+              names=set(z.namelist())
+              data=json.loads(z.read("assets/native_catalog.json"))
+              assert len(data)==25
+              assert sum(len(i["pages"]) for i in data)==654
+              assert all("assets/web/"+p in names for i in data for p in i["pages"])
+              for issue in data:
+                  assert "assets/web/"+issue["thumbnail"] in names, "Missing cover thumbnail: "+issue["id"]
+                  assert "assets/web/"+issue["cover"] in names, "Missing cover image: "+issue["id"]
+                  image=z.read("assets/web/"+issue["thumbnail"])
+                  assert image[:3]==bytes((255,216,255)), "Unreadable JPEG thumbnail: "+issue["id"]
+              print("Verified original 25 cover thumbnails and fallback covers in APK")
+              icons=[n for n in names if n.startswith("res/mipmap-") and n.endswith("/ic_launcher.png")]
+              assert len(icons)==5, "Expected launcher icon in five Android density folders"
+              for name in icons:
+                  assert z.read(name).startswith(bytes((137,80,78,71,13,10,26,10))), name
+              print("Original Pocket God Comics launcher icon present in 5 Android densities")
+              assert "classes.dex" in names
+              assert "AndroidManifest.xml" in names
+              for asset in ("shelf_icon@2x.png","list_icon@2x.png","bookmark@2x.png","single_page_spread_white@2x.png","two_page_spread_white@2x.png"):
+                  assert "assets/web/assets/ipa_original/"+asset in names,asset
+          print("ANDROID_UI_PARITY_BUILD_PASS", apk.stat().st_size, hashlib.sha256(apk.read_bytes()).hexdigest())
+          PY
+
+      - name: Upload iOS-parity APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Pocket_God_Comics_Android_iOS_Parity_TEST
+          path: android-app/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
+          if-no-files-found: error
