@@ -1,0 +1,93 @@
+name: Publish Android 16 Compatibility Preview
+
+'on':
+  push:
+    branches: [android-16-compatibility]
+    paths:
+      - .github/workflows/publish-android16-preview.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  preview:
+    name: Verify and publish isolated Android 16 prerelease
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Download validated Android 16 APK
+        uses: actions/download-artifact@v4
+        with:
+          name: Pocket_God_Comics_Android_16_Compat_v3.0.1_TEST
+          run-id: 41616899140
+          repository: PredragCkautovic/pocket-god-comics-legacy
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: apk
+
+      - name: Verify exact tested candidate before publishing
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+          import hashlib,json,shutil
+          path=Path("apk/app-debug.apk")
+          assert path.is_file() and path.stat().st_size==188027870, "APK size changed"
+          assert hashlib.sha256(path.read_bytes()).hexdigest()=="8f85161c73b3fe0b878820242e87807c65efed1fe85889875088430f6affd72f", "APK digest changed"
+          with ZipFile(path) as z:
+              assert z.testzip() is None
+              entries=set(z.namelist())
+              assert "classes.dex" in entries and "AndroidManifest.xml" in entries
+              books=json.loads(z.read("assets/native_catalog.json"))
+              assert len(books)==25 and sum(len(x["pages"]) for x in books)==654
+              for issue in books:
+                  assert "assets/web/"+issue["thumbnail"] in entries
+                  assert "assets/web/"+issue["cover"] in entries
+                  for p in issue["pages"]:
+                      assert "assets/web/"+p in entries
+          target=Path("publish/Pocket.God.Comics.Android16.Test.apk")
+          target.parent.mkdir(exist_ok=True)
+          shutil.copy2(path,target)
+          print("VERIFIED PREVIEW APK",target,path.stat().st_size)
+          PY
+
+      - name: Write release notes
+        run: |
+          cat > /tmp/preview-notes.md <<'EOF'
+          **Pocket God Comics 3.0.1 RC1 — Android 16 compatibility test**
+
+          This test build updates the Android target API from 28 to **35**, with Android 6.0 (API 23) retained as the minimum version. The fullscreen bookshelf and reader now account for display cutouts and edge-to-edge system navigation, and the original 25 comics, 654 reading pages, covers, and icon are preserved.
+
+          **Please test installation, bookshelf, reading, search, rotation and imported CBZ files on Xiaomi 13T / Android 16.** Compilation and packaging passed, but this has not yet been verified on that physical phone.
+
+          Download the APK below; it is a debug-signed test build. Upgrading from an older build can fail due to different debug signing certificates. **Back up custom comics and reading progress before uninstalling any older version.** Do not disable Android security protections to install.
+
+          This is a **prerelease**, kept separate from the device-tested [Modern 3.0 iOS + Android release](https://github.com/PredragCkautovic/pocket-god-comics-legacy/releases/tag/modern-v3.0.0) and the [Legacy v17 iOS release](https://github.com/PredragCkautovic/pocket-god-comics-legacy/releases/tag/legacy-v17).
+          EOF
+
+      - name: Create or update Android 16 prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag=modern-v3.0.1-android16-rc1
+          file=publish/Pocket.God.Comics.Android16.Test.apk
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$tag" "$file" --repo "$GITHUB_REPOSITORY" --clobber
+            gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --title "Pocket God Comics — Android 16 Compatibility Test" --notes-file /tmp/preview-notes.md --prerelease
+          else
+            gh release create "$tag" "$file" --repo "$GITHUB_REPOSITORY" --target android-16-compatibility --title "Pocket God Comics — Android 16 Compatibility Test" --notes-file /tmp/preview-notes.md --prerelease
+          fi
+          gh api "repos/$GITHUB_REPOSITORY/releases/tags/$tag" --jq '{tag: .tag_name, prerelease: .prerelease, assets: [.assets[] | {name,size,state,browser_download_url}]}' > /tmp/final.json
+          cat /tmp/final.json
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+          obj=json.loads(Path("/tmp/final.json").read_text())
+          assert obj["prerelease"] is True
+          assert len(obj["assets"])==1
+          item=obj["assets"][0]
+          assert item["name"]=="Pocket.God.Comics.Android16.Test.apk" and item["size"]==188027870 and item["state"]=="uploaded"
+          print("ANDROID16_PRERELEASE_VERIFIED")
+          PY
