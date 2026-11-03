@@ -157,6 +157,34 @@ public final class ReaderActivity extends Activity {
         });
         top.setVisibility(barsVisible?View.VISIBLE:View.GONE);
         bottom.setVisibility(barsVisible?View.VISIBLE:View.GONE);
+        // Android 15/16 enforces edge-to-edge for modern target SDKs.
+        // Keep page artwork full-bleed but move controls out of cutouts and
+        // the navigation gesture / 3-button areas when those are visible.
+        if(android.os.Build.VERSION.SDK_INT>=28){
+            root.setOnApplyWindowInsetsListener((view,insets)->{
+                android.view.DisplayCutout cutout=insets.getDisplayCutout();
+                int cutTop=cutout==null?0:cutout.getSafeInsetTop();
+                int cutLeft=cutout==null?0:cutout.getSafeInsetLeft();
+                int cutRight=cutout==null?0:cutout.getSafeInsetRight();
+                int navBottom=android.os.Build.VERSION.SDK_INT>=30
+                   ?insets.getInsets(android.view.WindowInsets.Type.navigationBars()).bottom
+                   :insets.getSystemWindowInsetBottom();
+                FrameLayout.LayoutParams topBar=(FrameLayout.LayoutParams)top.getLayoutParams();
+                int targetTop=dp(38)+cutTop;
+                if(topBar.height!=targetTop){
+                    topBar.height=targetTop;top.setLayoutParams(topBar);
+                }
+                top.setPadding(dp(3)+cutLeft,dp(2)+cutTop,dp(6)+cutRight,dp(2));
+                FrameLayout.LayoutParams bottomBar=(FrameLayout.LayoutParams)bottom.getLayoutParams();
+                int targetBottom=dp(48)+navBottom;
+                if(bottomBar.height!=targetBottom){
+                    bottomBar.height=targetBottom;bottom.setLayoutParams(bottomBar);
+                }
+                bottom.setPadding(dp(4),0,dp(8),navBottom);
+                return insets;
+            });
+            root.requestApplyInsets();
+        }
     }
     void selectSpread(boolean requested){
         if(doublePage==requested)return;
