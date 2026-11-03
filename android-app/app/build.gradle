@@ -6,9 +6,9 @@ android {
     defaultConfig {
         applicationId 'com.pocketgod.comics.modern'
         minSdk 23
-        targetSdk 28
-        versionCode 1
-        versionName '0.1.0'
+        targetSdk 35
+        versionCode 301
+        versionName '3.0.1'
     }
     buildTypes {
         release { minifyEnabled false }
