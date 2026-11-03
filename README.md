@@ -38,6 +38,10 @@ Both editions contain **25 comics and 654 pages** for reading offline.
 
 The iOS and Android versions use the same library and aim for the same look and feel. I've tested the modern builds on devices and kept the releases separate from the older iOS edition.
 
+### Android 16 compatibility preview
+
+I've also prepared an [Android 16 compatibility APK](https://github.com/PredragCkautovic/pocket-god-comics-legacy/releases/tag/modern-v3.0.1-android16-rc1) for devices that reject the older Android build. It targets Android API 35 while keeping Android 6.0 as the minimum, and retains all 25 comics, 654 pages, and the original artwork. This is a **test release**, separate from the current stable iOS/Android edition, pending installation testing on the Xiaomi 13T.
+
 ## Installation
 
 **iOS:** Download `Pocket God Comics.ipa` and install it using an appropriate signing or sideloading method. A compatible jailbroken device may also be used. Standard iOS installation requires valid signing.
