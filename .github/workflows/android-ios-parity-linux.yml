@@ -1,9 +1,9 @@
-name: Android iOS-Parity Reader APK
+name: Android 16 Compatibility APK
 
 'on':
   push:
     branches:
-      - modern-3.0.0-rc1-ci
+      - android-16-compatibility
     paths:
       - "android-app/**"
       - ".github/workflows/android-ios-parity-linux.yml"
@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   android-parity:
-    name: Native Android with verified iVerse source assets
+    name: Native Android 16 compatibility with verified original assets
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
@@ -114,14 +114,21 @@ jobs:
         working-directory: android-app
         run: gradle :app:assembleDebug --no-daemon --stacktrace
 
-      - name: Validate offline Android APK
+      - name: Validate Android 16 installer compatibility and offline APK
         run: |
           python3 - <<'PY'
           from pathlib import Path
           from zipfile import ZipFile
-          import hashlib,json
+          import hashlib,json,os,subprocess
           apk=Path("android-app/app/build/outputs/apk/debug/app-debug.apk")
           assert apk.is_file() and apk.stat().st_size>1000000
+          aapt=Path(os.environ["ANDROID_HOME"])/"build-tools"/"35.0.0"/"aapt"
+          badging=subprocess.check_output([str(aapt),"dump","badging",str(apk)],text=True)
+          assert "package: name='com.pocketgod.comics.modern'" in badging
+          assert "versionCode='301'" in badging and "versionName='3.0.1'" in badging
+          assert "sdkVersion:'23'" in badging, "Minimum Android 6 compatibility changed"
+          assert "targetSdkVersion:'35'" in badging, "Modern Android target not set in APK"
+          print("ANDROID_16_COMPAT_MANIFEST_PASS", "minSdk=23","targetSdk=35","versionCode=301")
           with ZipFile(apk) as z:
               assert z.testzip() is None
               names=set(z.namelist())
@@ -140,17 +147,18 @@ jobs:
               for name in icons:
                   assert z.read(name).startswith(bytes((137,80,78,71,13,10,26,10))), name
               print("Original Pocket God Comics launcher icon present in 5 Android densities")
+              assert not any(n.startswith("lib/") and n.endswith(".so") for n in names), "Unexpected native libraries may need 16KB page compatibility"
               assert "classes.dex" in names
               assert "AndroidManifest.xml" in names
               for asset in ("shelf_icon@2x.png","list_icon@2x.png","bookmark@2x.png","single_page_spread_white@2x.png","two_page_spread_white@2x.png"):
                   assert "assets/web/assets/ipa_original/"+asset in names,asset
-          print("ANDROID_UI_PARITY_BUILD_PASS", apk.stat().st_size, hashlib.sha256(apk.read_bytes()).hexdigest())
+          print("ANDROID_16_COMPAT_BUILD_PASS", apk.stat().st_size, hashlib.sha256(apk.read_bytes()).hexdigest())
           PY
 
-      - name: Upload iOS-parity APK
+      - name: Upload Android 16 test APK
         uses: actions/upload-artifact@v4
         with:
-          name: Pocket_God_Comics_Android_iOS_Parity_TEST
+          name: Pocket_God_Comics_Android_16_Compat_v3.0.1_TEST
           path: android-app/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
           if-no-files-found: error
