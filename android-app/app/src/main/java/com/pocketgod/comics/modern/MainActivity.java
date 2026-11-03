@@ -107,6 +107,22 @@ public final class MainActivity extends Activity {
         outer.setBackgroundColor(Color.rgb(24,102,122));
         root=outer;
         setContentView(outer);
+        // API 35+: edge-to-edge is enforced. Keep the original fullscreen
+        // bookshelf while protecting the heading from display cutouts.
+        if(android.os.Build.VERSION.SDK_INT>=28){
+            outer.setOnApplyWindowInsetsListener((view,insets)->{
+                android.view.DisplayCutout cutout=insets.getDisplayCutout();
+                int top=cutout==null?0:cutout.getSafeInsetTop();
+                int left=cutout==null?0:cutout.getSafeInsetLeft();
+                int right=cutout==null?0:cutout.getSafeInsetRight();
+                if(view.getPaddingTop()!=top || view.getPaddingLeft()!=left ||
+                   view.getPaddingRight()!=right){
+                    view.setPadding(left,top,right,0);
+                }
+                return insets;
+            });
+            outer.requestApplyInsets();
+        }
 
         // Match the new iOS fullscreen library: My Comics begins at the very top.
         heading=label(custom?"Custom Comics":"My Comics",21,Color.WHITE,true);
